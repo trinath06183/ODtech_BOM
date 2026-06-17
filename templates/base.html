@@ -1,0 +1,1206 @@
+{% load static %}
+{% load compress %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NexBOM Dashboard{% endblock %}</title>
+    <!-- PWA -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="BOM Tracker">
+    <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        surface: '#f7f9fb',
+                        'surface-dim': '#d8dadc',
+                        primary: '#2a14b4',
+                        secondary: '#006c49',
+                        tertiary: '#00414d',
+                        outline: '#777586',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    borderRadius: {
+                        'sm': '0.5rem',
+                        DEFAULT: '1rem',
+                        'md': '1.5rem',
+                        'lg': '2rem',
+                        'xl': '3rem',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- SortableJS (drag-and-drop) -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    {% compress css %}
+    <style>
+        /* Global page-transition progress bar */
+        @keyframes progressGrow {
+            0% {
+                width: 0%;
+            }
+
+            20% {
+                width: 25%;
+            }
+
+            50% {
+                width: 60%;
+            }
+
+            80% {
+                width: 85%;
+            }
+
+            100% {
+                width: 95%;
+            }
+        }
+
+        @keyframes progressFinish {
+            from {
+                width: 95%;
+                opacity: 1;
+            }
+
+            to {
+                width: 100%;
+                opacity: 0;
+            }
+        }
+
+        #page-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            z-index: 9999;
+            background: linear-gradient(90deg, #6366f1, #818cf8, #6366f1);
+            background-size: 200% 100%;
+            width: 0%;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        #page-progress.active {
+            opacity: 1;
+            animation: progressGrow 8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        #page-progress.done {
+            animation: progressFinish 0.3s ease forwards;
+        }
+
+        /* Skeleton loading animation */
+        @keyframes skeletonPulse {
+
+            0%,
+            100% {
+                opacity: 0.4;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+            background-size: 200% 100%;
+            animation: skeletonPulse 1.5s ease-in-out infinite;
+            border-radius: 0.375rem;
+        }
+
+        .skeleton-text {
+            height: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .skeleton-text-sm {
+            height: 0.625rem;
+            margin-bottom: 0.375rem;
+        }
+
+        .skeleton-avatar {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 0.5rem;
+        }
+
+        .skeleton-card {
+            height: 5rem;
+        }
+
+        /* Button loading spinner */
+        @keyframes btnSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .btn-loading {
+            position: relative;
+            color: transparent !important;
+            pointer-events: none;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 1rem;
+            height: 1rem;
+            margin: -0.5rem 0 0 -0.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: btnSpin 0.6s linear infinite;
+        }
+
+        /* ODtech Logo Animation */
+        @keyframes logoPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
+        }
+
+        .animate-logo {
+            animation: logoPulse 1.5s ease-in-out infinite;
+        }
+    </style>
+    {% endcompress %}
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-surface text-gray-900 font-sans antialiased h-screen flex overflow-hidden">
+    <!-- Full Page Loader -->
+    <div id="full-page-loader"
+        class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center transition-opacity duration-500">
+        <img src="{% static 'Picture1.png' %}" alt="ODtech"
+            class="h-16 w-auto object-contain animate-logo drop-shadow-sm">
+        <div class="mt-6 flex space-x-2">
+            <div class="w-2.5 h-2.5 bg-[#9DCD2D] rounded-full animate-bounce" style="animation-delay: 0s;"></div>
+            <div class="w-2.5 h-2.5 bg-[#9DCD2D] rounded-full animate-bounce" style="animation-delay: 0.15s;"></div>
+            <div class="w-2.5 h-2.5 bg-[#9DCD2D] rounded-full animate-bounce" style="animation-delay: 0.3s;"></div>
+        </div>
+    </div>
+
+    {% compress js %}
+    <script>
+        window.addEventListener('load', function () {
+            const loader = document.getElementById('full-page-loader');
+            if (loader) {
+                loader.classList.add('opacity-0');
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                }, 500);
+            }
+        });
+    </script>
+    {% endcompress %}
+
+    <!-- Page Progress Bar -->
+    <div id="page-progress"></div>
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
+        <!-- Top Nav -->
+        <header
+            class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 z-10 flex-shrink-0 shadow-sm">
+            <div class="flex items-center gap-8 h-full">
+                <a href="{% url 'tracker:dashboard' %}" class="flex items-center mr-4">
+                    <img src="{% static 'Picture1.png' %}" alt="ODtech BOM Tracker" class="h-10 w-auto object-contain">
+                </a>
+                <nav class="flex items-center gap-8 h-full">
+                    <a href="{% url 'tracker:dashboard' %}"
+                        class="h-full flex items-center border-b-[3px] {% if request.resolver_match.url_name == 'dashboard' %}border-primary text-primary{% else %}border-transparent hover:border-gray-300 text-gray-500 hover:text-gray-900{% endif %} font-semibold px-2 pt-1 transition-colors">Dashboard</a>
+                    <a href="{% url 'tracker:user_activity' %}"
+                        class="h-full flex items-center border-b-[3px] {% if request.resolver_match.url_name == 'user_activity' %}border-primary text-primary{% else %}border-transparent hover:border-gray-300 text-gray-500 hover:text-gray-900{% endif %} font-semibold px-2 pt-1 transition-colors">My Activity</a>
+                    {% if user.is_staff or user.is_superuser %}
+                    <a href="{% url 'tracker:user_management_list' %}"
+                        class="h-full flex items-center border-b-[3px] {% if 'user_management' in request.resolver_match.url_name %}border-primary text-primary{% else %}border-transparent hover:border-gray-300 text-gray-500 hover:text-gray-900{% endif %} font-semibold px-2 pt-1 transition-colors">Users</a>
+                    <a href="{% url 'tracker:audit_log_list' %}"
+                        class="h-full flex items-center border-b-[3px] {% if 'audit_log' in request.resolver_match.url_name or 'user_activity' in request.resolver_match.url_name %}border-primary text-primary{% else %}border-transparent hover:border-gray-300 text-gray-500 hover:text-gray-900{% endif %} font-semibold px-2 pt-1 transition-colors">Audit
+                        Logs</a>
+                    {% endif %}
+                    {% if user.is_superuser %}
+                    <a href="{% url 'tracker:system_admin_backup' %}"
+                        class="h-full flex items-center border-b-[3px] {% if request.resolver_match.url_name == 'system_admin_backup' %}border-primary text-primary{% else %}border-transparent hover:border-gray-300 text-gray-500 hover:text-gray-900{% endif %} font-semibold px-2 pt-1 transition-colors">Backup</a>
+                    {% endif %}
+
+                    <!-- New Application Navigation Button -->
+                    <a href="http://[IP_ADDRESS]"
+                        class="h-full flex items-center border-b-[3px] border-transparent hover:border-gray-300 text-gray-500 hover:text-gray-900 font-semibold px-2 pt-1 transition-colors"
+                        target="_blank" rel="noopener noreferrer">
+                        ODtech ERP
+                        <svg class="w-4 h-4 ml-1.5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
+                    </a>
+                </nav>
+            </div>
+            <div class="flex items-center gap-6">
+                {% if user.is_authenticated %}
+                <!-- Notes & To-Do Button -->
+                <button id="notes-todo-btn" onclick="openNotesPanel()"
+                    class="relative p-2 text-gray-400 hover:text-indigo-600 transition-colors focus:outline-none"
+                    title="Notes & To-Do">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6m-6 4h6" />
+                    </svg>
+                </button>
+                <!-- Notification Bell -->
+                <div class="relative" x-data="notificationsDropdown()">
+                    <button @click="open = !open" @click.away="open = false"
+                        class="relative p-2 text-gray-400 hover:text-indigo-600 transition-colors focus:outline-none">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        {% if unread_notifications_count > 0 %}
+                        <span
+                            class="absolute top-1 right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white">
+                            {{ unread_notifications_count }}
+                        </span>
+                        {% endif %}
+                    </button>
+
+                    <div x-show="open" x-cloak style="display: none;"
+                        class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-50 overflow-hidden flex flex-col">
+                        <div class="px-4 py-2 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <h3 class="text-sm font-semibold text-gray-900">Notifications</h3>
+                            <div class="flex gap-2">
+                                <button @click="tab = 'unread'" :class="tab === 'unread' ? 'text-indigo-600 font-semibold' : 'text-gray-500 hover:text-gray-700'" class="text-xs transition-colors focus:outline-none">Unread</button>
+                                <span class="text-gray-300">|</span>
+                                <button @click="tab = 'read'" :class="tab === 'read' ? 'text-indigo-600 font-semibold' : 'text-gray-500 hover:text-gray-700'" class="text-xs transition-colors focus:outline-none">Read</button>
+                            </div>
+                        </div>
+                        
+                        <div x-show="tab === 'unread'" class="max-h-64 overflow-y-auto flex-1">
+                            {% if unread_notifications %}
+                            <div class="px-4 py-2 border-b border-gray-50 flex justify-end">
+                                <a href="{% url 'tracker:api_mark_all_notifications_read' %}" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors">Mark all as read</a>
+                            </div>
+                            {% endif %}
+                            {% for notif in unread_notifications %}
+                            <a href="{% url 'tracker:api_mark_notification_read' notif.id %}"
+                                class="block px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors relative group cursor-pointer"
+                                :id="'notif-'+'{{ notif.id }}'">
+                                <p class="text-sm font-medium text-gray-900">{{ notif.title }}</p>
+                                <p class="text-xs text-gray-500 mt-1">{{ notif.message }}</p>
+                            </a>
+                            {% empty %}
+                            <div class="px-4 py-6 text-center text-sm text-gray-500">
+                                You're all caught up!
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div x-show="tab === 'read'" style="display: none;" class="max-h-64 overflow-y-auto flex-1">
+                            {% for notif in read_notifications %}
+                            <div class="block px-4 py-3 border-b border-gray-50 opacity-75">
+                                <p class="text-sm font-medium text-gray-700">{{ notif.title }}</p>
+                                <p class="text-xs text-gray-500 mt-1">{{ notif.message }}</p>
+                            </div>
+                            {% empty %}
+                            <div class="px-4 py-6 text-center text-sm text-gray-500">
+                                No read messages yet.
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    function notificationsDropdown() {
+                        return {
+                            open: false,
+                            tab: 'unread'
+                        }
+                    }
+                </script>
+
+                <!-- Profile Dropdown -->
+                <div class="relative ml-3" x-data="{ open: false }">
+                    <div>
+                        <button type="button" @click="open = !open" @click.away="open = false"
+                            class="flex max-w-xs items-center gap-3 rounded-full bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            id="user-menu-button" aria-expanded="false" aria-haspopup="true">
+                            <span class="sr-only">Open user menu</span>
+                            <div
+                                class="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden border border-gray-200">
+                                <img src="{% static 'avatar-placeholder.png' %}" alt=""
+                                    class="h-full w-full object-cover"
+                                    onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%236366f1\'><path d=\'M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z\'/></svg>'">
+                            </div>
+                            <div class="hidden md:block text-left">
+                                <div class="text-sm font-semibold text-gray-900 leading-none">{{ user.username }}</div>
+                            </div>
+                            <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div x-show="open" x-cloak style="display: none;"
+                        class="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                        role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1">
+                        <a href="{% url 'tracker:user_profile' %}"
+                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                            role="menuitem" tabindex="-1">Settings & Profile</a>
+                        <form method="post" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                                role="menuitem" tabindex="-1">Logout</button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- Scrollable Page Content -->
+        <main class="flex-1 overflow-y-auto w-full px-4 sm:px-6 lg:px-8 py-8 bg-surface">
+            {% if messages %}
+            <div class="mb-4 space-y-2 max-w-7xl mx-auto">
+                {% for message in messages %}
+                <div class="rounded-md px-4 py-3 text-sm flex items-start justify-between shadow-sm
+                    {% if message.tags == 'success' %}bg-secondary/10 border border-secondary/20 text-secondary
+                    {% elif message.tags == 'error' %}bg-red-50 border border-red-200 text-red-800
+                    {% else %}bg-yellow-50 border border-yellow-200 text-yellow-800{% endif %}">
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="max-w-7xl mx-auto">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // === Page Progress Bar ===
+        const progressBar = document.getElementById('page-progress');
+        function startProgress() {
+            progressBar.classList.remove('done');
+            progressBar.classList.add('active');
+        }
+        function finishProgress() {
+            progressBar.classList.remove('active');
+            progressBar.classList.add('done');
+        }
+
+        // Show progress on navigation (link clicks)
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[href]');
+            if (link && !link.target && !link.href.startsWith('javascript:') && !link.href.startsWith('#') && !link.hasAttribute('download')) {
+                startProgress();
+            }
+        });
+
+        // Show progress + loading state on form submissions
+        document.addEventListener('submit', (e) => {
+            startProgress();
+            const btn = e.target.querySelector('button[type="submit"]');
+            if (btn && !btn.classList.contains('btn-loading')) {
+                btn.classList.add('btn-loading');
+                btn.disabled = true;
+            }
+        });
+
+        // Finish progress when page is fully loaded (for back/forward nav)
+        window.addEventListener('pageshow', () => finishProgress());
+
+        // === Image Upload Listeners (gated — only activate if file inputs exist) ===
+        document.addEventListener("DOMContentLoaded", () => {
+            if (document.querySelectorAll('input[type="file"]').length > 0) {
+                setupImageUploadListeners();
+            }
+        });
+
+        function setupImageUploadListeners() {
+            const fileInputs = document.querySelectorAll('input[type="file"]');
+
+            fileInputs.forEach(input => {
+                if (!input.name || (!input.name.includes('photo') && !input.name.includes('document') && !input.name.includes('image') && !input.name.includes('file'))) {
+                    return;
+                }
+                if (input.dataset.dropzoneSetup) return;
+                input.dataset.dropzoneSetup = "true";
+
+                const parent = input.parentElement;
+                if (!parent) return;
+
+                const dropzone = document.createElement('div');
+                dropzone.className = "mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 hover:border-indigo-400 transition cursor-pointer flex flex-col items-center justify-center relative min-h-[120px] focus:ring-2 focus:ring-indigo-500 outline-none";
+                dropzone.tabIndex = 0;
+
+                const placeholder = document.createElement('div');
+                placeholder.className = "flex flex-col items-center text-center space-y-1 pointer-events-none";
+                placeholder.innerHTML = `
+                    <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <p class="text-xs text-gray-600 font-semibold">Drag & drop image here, or paste (Ctrl+V)</p>
+                    <p class="text-[10px] text-gray-400">or click to browse files</p>
+                `;
+
+                const previewContainer = document.createElement('div');
+                previewContainer.className = "hidden flex flex-col items-center space-y-2 w-full text-center";
+
+                const previewImage = document.createElement('img');
+                previewImage.className = "max-h-32 max-w-full rounded object-contain border border-gray-200 shadow-sm";
+
+                const previewInfo = document.createElement('span');
+                previewInfo.className = "text-[11px] font-medium text-gray-600 truncate max-w-[220px]";
+
+                const removeButton = document.createElement('button');
+                removeButton.type = "button";
+                removeButton.className = "text-xs text-red-500 hover:text-red-700 font-semibold px-2 py-1 rounded bg-red-50 hover:bg-red-100 border border-red-200 transition-colors mt-1";
+                removeButton.innerText = "Remove File";
+
+                previewContainer.appendChild(previewImage);
+                previewContainer.appendChild(previewInfo);
+                previewContainer.appendChild(removeButton);
+
+                input.style.display = "none";
+
+                parent.insertBefore(dropzone, input);
+                dropzone.appendChild(placeholder);
+                dropzone.appendChild(previewContainer);
+                dropzone.appendChild(input);
+
+                const pasteBtn = document.createElement('button');
+                pasteBtn.type = "button";
+                pasteBtn.className = "mt-2 w-full flex items-center justify-center gap-2 px-3 py-1.5 border border-indigo-200 shadow-sm text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors";
+                pasteBtn.innerHTML = `
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    Paste from Clipboard
+                `;
+                pasteBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                        const items = await navigator.clipboard.read();
+                        for (const item of items) {
+                            const imageTypes = item.types.filter(type => type.startsWith('image/'));
+                            if (imageTypes.length > 0) {
+                                const blob = await item.getType(imageTypes[0]);
+                                const name = 'pasted_image_' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '_') + '.png';
+                                const file = new File([blob], name, { type: blob.type });
+                                handleFile(file);
+                                if (window.showGlobalNotification) window.showGlobalNotification("Image pasted successfully!");
+                                return;
+                            }
+                        }
+                        if (window.showGlobalNotification) window.showGlobalNotification("No image found in clipboard.", 'warning');
+                    } catch (err) {
+                        console.error('Clipboard read failed:', err);
+                        if (window.showGlobalNotification) window.showGlobalNotification("Failed to read clipboard. Please allow clipboard permissions.", 'error');
+                    }
+                });
+                parent.insertBefore(pasteBtn, dropzone.nextSibling);
+
+                function handleFile(file) {
+                    if (!file) return;
+                    const isImage = file.type.startsWith('image/');
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    input.files = dt.files;
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    previewInfo.innerText = file.name;
+                    if (isImage) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            previewImage.src = e.target.result;
+                            previewImage.style.display = "block";
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        previewImage.src = "";
+                        previewImage.style.display = "none";
+                        previewInfo.innerText = `📄 ${file.name}`;
+                    }
+
+                    placeholder.classList.add('hidden');
+                    previewContainer.classList.remove('hidden');
+                    dropzone.classList.remove('border-gray-300', 'bg-gray-50');
+                    dropzone.classList.add('border-emerald-400', 'bg-emerald-50/20');
+                }
+
+                dropzone.addEventListener('click', (e) => {
+                    if (e.target === removeButton) return;
+                    input.click();
+                });
+
+                input.addEventListener('change', () => {
+                    if (input.files && input.files[0]) {
+                        handleFile(input.files[0]);
+                    }
+                });
+
+                removeButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    input.value = "";
+                    input.files = null;
+                    previewImage.src = "";
+                    previewInfo.innerText = "";
+                    previewContainer.classList.add('hidden');
+                    placeholder.classList.remove('hidden');
+                    dropzone.classList.remove('border-emerald-400', 'bg-emerald-50/20');
+                    dropzone.classList.add('border-gray-300', 'bg-gray-50');
+                });
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.classList.remove('border-gray-300', 'bg-gray-50');
+                        dropzone.classList.add('border-indigo-500', 'bg-indigo-50/50');
+                    }, false);
+                });
+
+                ['dragleave', 'dragend', 'drop'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/50');
+                        if (!input.files || !input.files[0]) {
+                            dropzone.classList.add('border-gray-300', 'bg-gray-50');
+                        } else {
+                            dropzone.classList.add('border-emerald-400', 'bg-emerald-50/20');
+                        }
+                    }, false);
+                });
+
+                dropzone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files && files[0]) {
+                        handleFile(files[0]);
+                    }
+                }, false);
+            });
+        }
+
+        // Track the last active form for paste targeting
+        let lastActiveForm = null;
+        const updateActiveForm = (e) => {
+            const form = e.target.closest('form');
+            if (form) lastActiveForm = form;
+        };
+        document.addEventListener('focusin', updateActiveForm);
+        document.addEventListener('mousedown', updateActiveForm);
+
+        // Global Paste Event Listener
+        document.addEventListener('paste', (e) => {
+            const fileInputs = document.querySelectorAll('input[type="file"]');
+            if (fileInputs.length === 0) return;
+
+            const clipboardData = e.clipboardData || window.clipboardData;
+            if (!clipboardData) return;
+
+            let file = null;
+            if (clipboardData.files && clipboardData.files.length > 0) {
+                file = clipboardData.files[0];
+            } else if (clipboardData.items) {
+                const items = clipboardData.items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        file = items[i].getAsFile();
+                        break;
+                    }
+                }
+            }
+
+            if (!file) return;
+
+            function isVisible(el) {
+                if (!el) return false;
+                let parent = el;
+                while (parent) {
+                    if (parent.style && (parent.style.display === 'none' || parent.style.visibility === 'hidden')) return false;
+                    const style = window.getComputedStyle(parent);
+                    if (style.display === 'none' || style.visibility === 'hidden') return false;
+                    parent = parent.parentElement;
+                }
+                return true;
+            }
+
+            let targetInput = null;
+            const targetForm = (document.activeElement && document.activeElement.closest('form')) || lastActiveForm;
+            if (targetForm) {
+                for (let i = 0; i < fileInputs.length; i++) {
+                    const input = fileInputs[i];
+                    if (targetForm.contains(input) && input.name && (input.name.includes('photo') || input.name.includes('document') || input.name.includes('image') || input.name.includes('file'))) {
+                        if (isVisible(input.parentElement)) {
+                            const name = input.name.toLowerCase();
+                            const isImg = file.type.startsWith('image/');
+                            if (isImg || name.includes('document') || name.includes('file')) {
+                                targetInput = input;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!targetInput) {
+                for (let i = 0; i < fileInputs.length; i++) {
+                    const input = fileInputs[i];
+                    if (input.name && (input.name.includes('photo') || input.name.includes('document') || input.name.includes('image') || input.name.includes('file'))) {
+                        const parent = input.parentElement;
+                        if (parent && isVisible(parent)) {
+                            const name = input.name.toLowerCase();
+                            const isImg = file.type.startsWith('image/');
+                            if (isImg || name.includes('document') || name.includes('file')) {
+                                targetInput = input;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (targetInput) {
+                let pastedFile = file;
+                if (file.name === 'image.png' || !file.name) {
+                    const name = `pasted_image_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '_')}.png`;
+                    pastedFile = new File([file], name, { type: file.type || 'image/png' });
+                }
+                const dt = new DataTransfer();
+                dt.items.add(pastedFile);
+                targetInput.files = dt.files;
+                targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                window.showGlobalNotification("Image pasted successfully!");
+            }
+        });
+
+        window.showGlobalNotification = function (message, type = 'success') {
+            const toast = document.createElement('div');
+            const bgClass = type === 'error' ? 'bg-red-600' : (type === 'warning' ? 'bg-yellow-500' : 'bg-indigo-600');
+            toast.className = `fixed bottom-5 right-5 ${bgClass} text-white text-xs font-semibold px-4 py-3 rounded-md shadow-2xl z-[9999] transition-all duration-300 transform translate-y-10 opacity-0 flex items-center gap-2 max-w-sm`;
+
+            let icon = '';
+            if (type === 'error') {
+                icon = `<svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+            } else if (type === 'warning') {
+                icon = `<svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+            } else {
+                icon = `<svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+            }
+
+            toast.innerHTML = `${icon} <span>${message}</span>`;
+            document.body.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, type === 'error' ? 5000 : 3000);
+        };
+
+        // Catch and display global errors immediately
+        // Note: cross-origin CDN scripts report as empty "Script error." — filter those out
+        window.addEventListener('error', function (e) {
+            if (!e.message || e.message === 'Script error.' || e.message === 'Script error') return;
+            window.showGlobalNotification(`Error: ${e.message}`, 'error');
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+            const reason = e.reason instanceof Error ? e.reason.message : (typeof e.reason === 'string' ? e.reason : '');
+            if (!reason) return;
+            window.showGlobalNotification(`Error: ${reason}`, 'error');
+        });
+
+        // Only poll for new file inputs if the page has forms with file inputs
+        if (document.querySelectorAll('input[type="file"]').length > 0) {
+            setInterval(setupImageUploadListeners, 2000);
+        }
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         NOTES & TO-DO PANEL
+    ═══════════════════════════════════════════════════════════ -->
+    {% if user.is_authenticated %}
+    <!-- Backdrop -->
+    <div id="ntp-backdrop"
+        onclick="closeNotesPanel()"
+        style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:10000;transition:opacity .25s;"
+    ></div>
+
+    <!-- Slide-in Panel -->
+    <div id="ntp-panel"
+        style="display:none;position:fixed;top:0;right:0;height:100%;width:420px;max-width:95vw;
+               background:#fff;z-index:10001;box-shadow:-4px 0 32px rgba(0,0,0,0.15);
+               display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);">
+
+        <!-- Panel Header -->
+        <div style="padding:16px 20px 0;border-bottom:1px solid #e5e7eb;flex-shrink:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <span style="font-weight:700;font-size:1rem;color:#1e1b4b;font-family:Outfit,sans-serif;letter-spacing:-.01em;">📒 Notes &amp; To-Do</span>
+                <button onclick="closeNotesPanel()" style="background:none;border:none;cursor:pointer;padding:4px;color:#9ca3af;" title="Close">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <!-- Tabs -->
+            <div style="display:flex;gap:0;">
+                <button id="ntp-tab-notes" onclick="ntpSwitchTab('notes')"
+                    style="flex:1;padding:8px 0;font-size:.85rem;font-weight:600;border:none;background:none;cursor:pointer;
+                           border-bottom:2px solid #4f46e5;color:#4f46e5;transition:all .2s;">📝 Notes</button>
+                <button id="ntp-tab-todos" onclick="ntpSwitchTab('todos')"
+                    style="flex:1;padding:8px 0;font-size:.85rem;font-weight:600;border:none;background:none;cursor:pointer;
+                           border-bottom:2px solid transparent;color:#6b7280;transition:all .2s;">✅ To-Do</button>
+            </div>
+        </div>
+
+        <!-- Tab Content Container -->
+        <div style="flex:1;overflow-y:auto;">
+
+            <!-- ── NOTES TAB ── -->
+            <div id="ntp-pane-notes" style="display:flex;flex-direction:column;height:100%;">
+                <!-- Add Note Form -->
+                <div style="padding:14px 16px 10px;border-bottom:1px solid #f3f4f6;">
+                    <div style="display:flex;gap:8px;">
+                        <input id="ntp-note-title-input" type="text" placeholder="Note title…"
+                            style="flex:1;border:1px solid #d1d5db;border-radius:8px;padding:7px 10px;font-size:.82rem;outline:none;transition:border-color .15s;"
+                            onkeydown="if(event.key==='Enter')openNoteCreate()">
+                        <button onclick="openNoteCreate()"
+                            style="background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+                            + Add
+                        </button>
+                    </div>
+                </div>
+                <!-- Notes List -->
+                <div id="ntp-notes-list" style="flex:1;overflow-y:auto;padding:8px 0;"></div>
+            </div>
+
+            <!-- ── TODOS TAB ── -->
+            <div id="ntp-pane-todos" style="display:none;flex-direction:column;height:100%;">
+                <!-- Add Todo Form -->
+                <div style="padding:14px 16px 10px;border-bottom:1px solid #f3f4f6;">
+                    <div style="display:flex;gap:8px;">
+                        <input id="ntp-todo-title-input" type="text" placeholder="New task…"
+                            style="flex:1;border:1px solid #d1d5db;border-radius:8px;padding:7px 10px;font-size:.82rem;outline:none;transition:border-color .15s;"
+                            onkeydown="if(event.key==='Enter')ntpCreateTodo()">
+                        <button onclick="ntpCreateTodo()"
+                            style="background:#059669;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+                            + Add
+                        </button>
+                    </div>
+                </div>
+                <!-- Todos List -->
+                <div id="ntp-todos-list" style="flex:1;overflow-y:auto;padding:8px 0;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Detail / Edit Modal -->
+    <div id="ntp-note-modal"
+        style="display:none;position:fixed;inset:0;z-index:10100;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:14px;width:520px;max-width:95vw;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.2);position:relative;">
+            <button onclick="closeNoteModal()" style="position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:#9ca3af;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <h3 id="ntp-modal-heading" style="font-size:1rem;font-weight:700;color:#1e1b4b;margin-bottom:14px;font-family:Outfit,sans-serif;">Note</h3>
+            <input id="ntp-modal-title" type="text" placeholder="Title"
+                style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:9px 12px;font-size:.87rem;margin-bottom:10px;box-sizing:border-box;outline:none;">
+            <textarea id="ntp-modal-content" rows="8" placeholder="Write your note here…"
+                style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:9px 12px;font-size:.85rem;resize:vertical;box-sizing:border-box;outline:none;font-family:inherit;"></textarea>
+            <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
+                <button onclick="closeNoteModal()" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:.84rem;cursor:pointer;">Cancel</button>
+                <button id="ntp-modal-save-btn" onclick="ntpSaveNote()" style="padding:8px 22px;border:none;border-radius:8px;background:#4f46e5;color:#fff;font-size:.84rem;font-weight:600;cursor:pointer;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ─────────────────────────────────────────────────────────────────
+    //  Notes & To-Do Panel — All logic in plain JS, no dependencies
+    // ─────────────────────────────────────────────────────────────────
+    const NTP = {
+        currentTab: 'notes',
+        notes: [],
+        todos: [],
+        editingNoteId: null,
+        loaded: false,
+    };
+
+    // Baked in at render time — true only for staff / superusers
+    const NTP_IS_ADMIN = {{ user.is_staff|yesno:'true,false' }} || {{ user.is_superuser|yesno:'true,false' }};
+
+    function openNotesPanel() {
+        const panel    = document.getElementById('ntp-panel');
+        const backdrop = document.getElementById('ntp-backdrop');
+        panel.style.display    = 'flex';
+        backdrop.style.display = 'block';
+        requestAnimationFrame(() => {
+            panel.style.transform = 'translateX(0)';
+            backdrop.style.opacity = '1';
+        });
+        if (!NTP.loaded) {
+            NTP.loaded = true;
+            ntpLoadNotes();
+            ntpLoadTodos();
+        }
+    }
+
+    function closeNotesPanel() {
+        const panel    = document.getElementById('ntp-panel');
+        const backdrop = document.getElementById('ntp-backdrop');
+        panel.style.transform  = 'translateX(100%)';
+        backdrop.style.opacity = '0';
+        setTimeout(() => {
+            panel.style.display    = 'none';
+            backdrop.style.display = 'none';
+        }, 300);
+    }
+
+    function ntpSwitchTab(tab) {
+        NTP.currentTab = tab;
+        ['notes', 'todos'].forEach(t => {
+            const btn  = document.getElementById('ntp-tab-' + t);
+            const pane = document.getElementById('ntp-pane-' + t);
+            const isActive = t === tab;
+            btn.style.borderBottomColor = isActive ? (t === 'notes' ? '#4f46e5' : '#059669') : 'transparent';
+            btn.style.color = isActive ? (t === 'notes' ? '#4f46e5' : '#059669') : '#6b7280';
+            pane.style.display = isActive ? 'flex' : 'none';
+        });
+    }
+
+    // ─── CSRF helper ───
+    function getCsrfToken() {
+        // Try getting it from the DOM first
+        const tokenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (tokenInput) return tokenInput.value;
+        
+        // Fallback to reading the cookie
+        const cookieNames = ['odtech_bom_csrftoken', 'csrftoken'];
+        const cookies = document.cookie.split(';');
+        for (const name of cookieNames) {
+            for (let c of cookies) {
+                c = c.trim();
+                if (c.startsWith(name + '=')) return decodeURIComponent(c.slice(name.length + 1));
+            }
+        }
+        return '';
+    }
+
+    async function ntpFetch(url, method='GET', body=null) {
+        const opts = {
+            method,
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        };
+        if (body) opts.body = JSON.stringify(body);
+        const r = await fetch(url, opts);
+        return r.json();
+    }
+
+    // ─────────────────── NOTES ───────────────────
+    async function ntpLoadNotes() {
+        const data = await ntpFetch('/api/my/notes/');
+        NTP.notes = data.notes || [];
+        ntpRenderNotes();
+    }
+
+    function ntpRenderNotes() {
+        const list = document.getElementById('ntp-notes-list');
+        if (!NTP.notes.length) {
+            list.innerHTML = `<div style="text-align:center;padding:40px 16px;color:#9ca3af;font-size:.85rem;">No notes yet. Add one above!</div>`;
+            return;
+        }
+        list.innerHTML = NTP.notes.map(n => `
+            <div style="border-bottom:1px solid #f3f4f6;padding:10px 16px;" data-note-id="${n.id}">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <button onclick="openNoteView('${n.id}')"
+                        style="flex:1;text-align:left;background:none;border:none;cursor:pointer;font-size:.88rem;font-weight:600;color:#1f2937;padding:0;line-height:1.4;word-break:break-word;">
+                        ${escHtml(n.title)}
+                    </button>
+                    <div style="display:flex;gap:6px;flex-shrink:0;">
+                        <button onclick="openNoteEdit('${n.id}')"
+                            style="background:none;border:none;cursor:pointer;color:#6b7280;padding:2px;" title="Edit">
+                            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        </button>
+                        <button onclick="ntpDeleteNote('${n.id}')"
+                            style="background:none;border:none;cursor:pointer;color:#ef4444;padding:2px;" title="Delete">
+                            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div style="font-size:.74rem;color:#9ca3af;margin-top:2px;">✏️ Edited: ${n.updated_at}</div>
+                <!-- Expandable content -->
+                <div id="note-expand-${n.id}" style="display:none;margin-top:10px;font-size:.84rem;color:#374151;
+                    background:#f9fafb;border-radius:8px;padding:10px 12px;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;">
+                    ${escHtml(n.content || '(no content)')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function openNoteView(id) {
+        const el = document.getElementById('note-expand-' + id);
+        if (!el) return;
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function openNoteCreate() {
+        const titleInput = document.getElementById('ntp-note-title-input');
+        const title = titleInput.value.trim();
+        if (!title) { titleInput.focus(); return; }
+        // Open modal pre-filled
+        NTP.editingNoteId = null;
+        document.getElementById('ntp-modal-heading').textContent = 'New Note';
+        document.getElementById('ntp-modal-title').value = title;
+        document.getElementById('ntp-modal-content').value = '';
+        openNoteModal();
+        titleInput.value = '';
+    }
+
+    function openNoteEdit(id) {
+        const note = NTP.notes.find(n => n.id === id);
+        if (!note) return;
+        NTP.editingNoteId = id;
+        document.getElementById('ntp-modal-heading').textContent = 'Edit Note';
+        document.getElementById('ntp-modal-title').value = note.title;
+        document.getElementById('ntp-modal-content').value = note.content || '';
+        openNoteModal();
+    }
+
+    function openNoteModal() {
+        const modal = document.getElementById('ntp-note-modal');
+        modal.style.display = 'flex';
+        setTimeout(() => document.getElementById('ntp-modal-content').focus(), 50);
+    }
+
+    function closeNoteModal() {
+        document.getElementById('ntp-note-modal').style.display = 'none';
+        NTP.editingNoteId = null;
+    }
+
+    async function ntpSaveNote() {
+        const title   = document.getElementById('ntp-modal-title').value.trim();
+        const content = document.getElementById('ntp-modal-content').value;
+        if (!title) { alert('Title is required.'); return; }
+
+        const btn = document.getElementById('ntp-modal-save-btn');
+        btn.textContent = 'Saving…'; btn.disabled = true;
+
+        let data;
+        if (NTP.editingNoteId) {
+            data = await ntpFetch(`/api/my/notes/${NTP.editingNoteId}/`, 'PATCH', { title, content });
+            if (data.success) {
+                const idx = NTP.notes.findIndex(n => n.id === NTP.editingNoteId);
+                if (idx >= 0) NTP.notes[idx] = data.note;
+            }
+        } else {
+            data = await ntpFetch('/api/my/notes/', 'POST', { title, content });
+            if (data.success) NTP.notes.unshift(data.note);
+        }
+
+        btn.textContent = 'Save'; btn.disabled = false;
+        if (data.success) {
+            closeNoteModal();
+            ntpRenderNotes();
+        } else {
+            alert(data.error || 'Failed to save note.');
+        }
+    }
+
+    async function ntpDeleteNote(id) {
+        if (!confirm('Delete this note?')) return;
+        const data = await ntpFetch(`/api/my/notes/${id}/`, 'DELETE');
+        if (data.success) {
+            NTP.notes = NTP.notes.filter(n => n.id !== id);
+            ntpRenderNotes();
+        }
+    }
+
+    // ─────────────────── TODOS ───────────────────
+    async function ntpLoadTodos() {
+        const data = await ntpFetch('/api/my/todos/');
+        NTP.todos = data.todos || [];
+        ntpRenderTodos();
+    }
+
+    function ntpRenderTodos() {
+        const list = document.getElementById('ntp-todos-list');
+        if (!NTP.todos.length) {
+            list.innerHTML = `<div style="text-align:center;padding:40px 16px;color:#9ca3af;font-size:.85rem;">No tasks yet. Add one above!</div>`;
+            return;
+        }
+        const pending   = NTP.todos.filter(t => !t.is_completed);
+        const completed = NTP.todos.filter(t => t.is_completed);
+
+        function renderTodo(t) {
+            return `
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid #f3f4f6;${t.is_completed ? 'opacity:.6;' : ''}" data-todo-id="${t.id}">
+                <input type="checkbox" ${t.is_completed ? 'checked' : ''}
+                    onchange="ntpToggleTodo('${t.id}', this.checked)"
+                    style="margin-top:3px;width:16px;height:16px;cursor:pointer;accent-color:#059669;flex-shrink:0;">
+                <div style="flex:1;min-width:0;">
+                    <div id="todo-view-${t.id}" style="">
+                        <span style="font-size:.87rem;font-weight:600;color:#1f2937;${ t.is_completed ? 'text-decoration:line-through;color:#9ca3af;' : '' }">${escHtml(t.title)}</span>
+                        ${t.description ? `<div style="font-size:.78rem;color:#6b7280;margin-top:2px;word-break:break-word;white-space:pre-wrap;">${escHtml(t.description)}</div>` : ''}
+                        ${t.updated_at ? `<div style="font-size:.72rem;color:#9ca3af;margin-top:3px;">✏️ Edited: ${t.updated_at}</div>` : ''}
+                    </div>
+                </div>
+                <div style="display:flex;gap:5px;flex-shrink:0;">
+                    <button onclick="openTodoEdit('${t.id}')"
+                        style="background:none;border:none;cursor:pointer;color:#6b7280;padding:2px;" title="Edit">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </button>
+                    <button onclick="ntpDeleteTodo('${t.id}')"
+                        style="background:none;border:none;cursor:pointer;color:#ef4444;padding:2px;" title="Delete">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Inline edit form (hidden by default) -->
+            <div id="todo-edit-${t.id}" style="display:none;padding:8px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+                <input id="todo-edit-title-${t.id}" type="text" value="${escAttr(t.title)}"
+                    style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:.82rem;margin-bottom:6px;box-sizing:border-box;outline:none;">
+                <textarea id="todo-edit-desc-${t.id}" rows="2" placeholder="Description (optional)"
+                    style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:.8rem;resize:vertical;box-sizing:border-box;outline:none;font-family:inherit;">${escHtml(t.description)}</textarea>
+                <div style="display:flex;gap:8px;margin-top:6px;justify-content:flex-end;">
+                    <button onclick="cancelTodoEdit('${t.id}')" style="padding:5px 14px;border:1px solid #d1d5db;border-radius:6px;background:#fff;font-size:.8rem;cursor:pointer;">Cancel</button>
+                    <button onclick="ntpSaveTodoEdit('${t.id}')" style="padding:5px 14px;border:none;border-radius:6px;background:#059669;color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;">Save</button>
+                </div>
+            </div>`;
+        }
+
+        let html = '';
+        if (pending.length) html += pending.map(renderTodo).join('');
+        if (completed.length) {
+            html += `<div style="padding:8px 16px 4px;font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;">Completed</div>`;
+            html += completed.map(renderTodo).join('');
+        }
+        list.innerHTML = html;
+    }
+
+    async function ntpCreateTodo() {
+        const input = document.getElementById('ntp-todo-title-input');
+        const title = input.value.trim();
+        if (!title) { input.focus(); return; }
+        const data = await ntpFetch('/api/my/todos/', 'POST', { title });
+        if (data.success) {
+            NTP.todos.unshift(data.todo);
+            ntpRenderTodos();
+            input.value = '';
+        } else {
+            alert(data.error || 'Failed to create task.');
+        }
+    }
+
+    async function ntpToggleTodo(id, checked) {
+        const data = await ntpFetch(`/api/my/todos/${id}/`, 'PATCH', { is_completed: checked });
+        if (data.success) {
+            const idx = NTP.todos.findIndex(t => t.id === id);
+            if (idx >= 0) NTP.todos[idx] = data.todo;
+            ntpRenderTodos();
+        }
+    }
+
+    function openTodoEdit(id) {
+        // Show edit form
+        const editDiv  = document.getElementById('todo-edit-' + id);
+        const viewDiv  = document.getElementById('todo-view-' + id);
+        if (!editDiv) return;
+        editDiv.style.display = 'block';
+        if (viewDiv) viewDiv.style.opacity = '0.4';
+    }
+
+    function cancelTodoEdit(id) {
+        const editDiv = document.getElementById('todo-edit-' + id);
+        const viewDiv = document.getElementById('todo-view-' + id);
+        if (editDiv) editDiv.style.display = 'none';
+        if (viewDiv) viewDiv.style.opacity = '1';
+    }
+
+    async function ntpSaveTodoEdit(id) {
+        const title = document.getElementById('todo-edit-title-' + id).value.trim();
+        const desc  = document.getElementById('todo-edit-desc-'  + id).value;
+        if (!title) { alert('Title cannot be empty.'); return; }
+        const data = await ntpFetch(`/api/my/todos/${id}/`, 'PATCH', { title, description: desc });
+        if (data.success) {
+            const idx = NTP.todos.findIndex(t => t.id === id);
+            if (idx >= 0) NTP.todos[idx] = data.todo;
+            ntpRenderTodos();
+        } else {
+            alert(data.error || 'Failed to save.');
+        }
+    }
+
+    async function ntpDeleteTodo(id) {
+        if (!confirm('Delete this task?')) return;
+        const data = await ntpFetch(`/api/my/todos/${id}/`, 'DELETE');
+        if (data.success) {
+            NTP.todos = NTP.todos.filter(t => t.id !== id);
+            ntpRenderTodos();
+        }
+    }
+
+    // ─── Utility ───
+    function escHtml(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function escAttr(s) { return escHtml(s); }
+    </script>
+    {% endif %}
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('{% static "sw.js" %}')
+                .then(reg => console.log('[SW] Registered:', reg.scope))
+                .catch(err => console.warn('[SW] Registration failed:', err));
+        });
+    }
+    </script>
+</body>
+
+</html>
