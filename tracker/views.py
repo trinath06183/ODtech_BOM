@@ -9,7 +9,7 @@ from django.views.generic import CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
-from .models import Order, Lot, Product, SupplierCostOption, ProductBookmark, Notification, InternalNote, AuditLog, PriceApprovalRequest
+from .models import Order, Lot, Product, SupplierCostOption, ProductBookmark, Notification, InternalNote, AuditLog, PriceApprovalRequest, Task
 from .forms import OrderForm, LotForm, ProductForm, SupplierCostOptionForm, CSVUploadForm, ProductPricingForm
 from django.views.decorators.http import require_POST
 import json
