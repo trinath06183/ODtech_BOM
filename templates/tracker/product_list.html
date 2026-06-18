@@ -626,15 +626,19 @@
                         <tr class="bg-gray-50/80 border-t border-gray-200 font-semibold"
                             x-show="!collapsedLots['{{ lot_group.grouper.id|default:'unassigned' }}']">
                             <td x-show="bulkOpen"></td>
-                            <td colspan="4" class="px-3 py-3 text-right text-sm text-gray-700 uppercase tracking-wider">Lot Total:</td>
+                            <td colspan="5" class="px-3 py-3 text-right text-sm text-gray-700 uppercase tracking-wider">Lot Total:</td>
+                            {% if field_visibility.can_see_purchase_price %}
                             <td class="px-3 py-3 text-right text-sm text-indigo-700">
                                 <div x-text="'₹' + (lotTotals['{{ lot_group.grouper.id|default:'unassigned' }}']?.buyTotalEx || 0).toFixed(2)"></div>
                                 <div class="text-indigo-500 text-xs font-normal" x-text="'₹' + (lotTotals['{{ lot_group.grouper.id|default:'unassigned' }}']?.buyTotalInc || 0).toFixed(2)"></div>
                             </td>
+                            {% endif %}
+                            {% if field_visibility.can_see_selling_price %}
                             <td class="px-3 py-3 text-right text-sm text-emerald-700">
                                 <div x-text="'₹' + (lotTotals['{{ lot_group.grouper.id|default:'unassigned' }}']?.sellTotalEx || 0).toFixed(2)"></div>
                                 <div class="text-emerald-500 text-xs font-normal" x-text="'₹' + (lotTotals['{{ lot_group.grouper.id|default:'unassigned' }}']?.sellTotalInc || 0).toFixed(2)"></div>
                             </td>
+                            {% endif %}
                             <td colspan="3"></td>
                         </tr>
                     </tbody>
