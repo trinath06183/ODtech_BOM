@@ -390,6 +390,21 @@ class UserTodo(models.Model):
     def __str__(self):
         return f"Todo by {self.user.username}: {self.title}"
 
+class UserReferenceDocument(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reference_documents')
+    note = models.ForeignKey(UserNote, on_delete=models.CASCADE, related_name='documents', null=True, blank=True)
+    todo = models.ForeignKey(UserTodo, on_delete=models.CASCADE, related_name='documents', null=True, blank=True)
+    document = models.FileField(upload_to='user_references/')
+    reference_text = models.CharField(max_length=500, blank=True, help_text="Text box for document reference")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"Doc: {self.reference_text or self.document.name} by {self.user.username}"
+
 class SystemSetting(models.Model):
     key = models.CharField(max_length=255, unique=True)
     value = models.TextField(blank=True, null=True)

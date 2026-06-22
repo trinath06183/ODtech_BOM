@@ -92,6 +92,7 @@ urlpatterns = [
     path('api/my/todos/<uuid:todo_id>/', views.api_todo_detail, name='api_todo_detail'),
 
     # System Backup and Restore
+    path('api/reference-document/<uuid:doc_id>/delete/', views.api_delete_reference_document, name='api_delete_reference_document'),
     path('system/admin/backup/', views.system_admin_backup_view, name='system_admin_backup'),
     path('system/backup/', views.system_backup, name='system_backup'),
     path('system/restore/', views.system_restore, name='system_restore'),

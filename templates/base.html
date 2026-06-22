@@ -849,6 +849,13 @@
                 style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:9px 12px;font-size:.87rem;margin-bottom:10px;box-sizing:border-box;outline:none;">
             <textarea id="ntp-modal-content" rows="8" placeholder="Write your note here…"
                 style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:9px 12px;font-size:.85rem;resize:vertical;box-sizing:border-box;outline:none;font-family:inherit;"></textarea>
+            
+            <div style="margin-top:10px;background:#f9fafb;padding:10px;border-radius:8px;border:1px dashed #d1d5db;">
+                <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Attach Reference Documents</label>
+                <div id="ntp-modal-existing-docs" style="margin-bottom:8px;display:none;"></div>
+                <input id="ntp-modal-docs" type="file" multiple style="font-size:0.8rem;width:100%;margin-bottom:8px;">
+                <input id="ntp-modal-doc-ref" type="text" placeholder="Document Reference (applies to all attached files)" style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:0.8rem;box-sizing:border-box;outline:none;">
+            </div>
             <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
                 <button onclick="closeNoteModal()" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:.84rem;cursor:pointer;">Cancel</button>
                 <button id="ntp-modal-save-btn" onclick="ntpSaveNote()" style="padding:8px 22px;border:none;border-radius:8px;background:#4f46e5;color:#fff;font-size:.84rem;font-weight:600;cursor:pointer;">Save</button>
@@ -928,21 +935,62 @@
         return '';
     }
 
-    async function ntpFetch(url, method='GET', body=null) {
+        async function ntpFetch(url, method='GET', body=null) {
+        const isFormData = body instanceof FormData;
         const opts = {
             method,
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+            headers: { 'X-CSRFToken': getCsrfToken() },
         };
-        if (body) opts.body = JSON.stringify(body);
+        if (!isFormData) {
+            opts.headers['Content-Type'] = 'application/json';
+        }
+        if (body) {
+            opts.body = isFormData ? body : JSON.stringify(body);
+        }
         const r = await fetch(url, opts);
         return r.json();
     }
+
 
     // ─────────────────── NOTES ───────────────────
     async function ntpLoadNotes() {
         const data = await ntpFetch('/api/my/notes/');
         NTP.notes = data.notes || [];
         ntpRenderNotes();
+    }
+
+        function renderDocumentItem(d) {
+        const ext = d.url.split('.').pop().toLowerCase();
+        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+        const isPdf = ['pdf'].includes(ext);
+        const target = (isImage || isPdf) ? 'target="_blank"' : '';
+        return `
+            <div data-doc-id="${d.id}" style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:#f3f4f6;border-radius:6px;margin-top:4px;font-size:0.75rem;">
+                <div style="display:flex;align-items:center;gap:6px;overflow:hidden;">
+                    <span style="font-size:1.1rem;">📎</span>
+                    <div style="display:flex;flex-direction:column;min-width:0;">
+                        <a href="${d.url}" ${target} style="color:#4f46e5;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${d.name}">
+                            ${d.name}
+                        </a>
+                        ${d.reference_text ? `<span style="color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(d.reference_text)}</span>` : ''}
+                    </div>
+                </div>
+                <button type="button" onclick="ntpDeleteDocument('${d.id}')" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:2px;flex-shrink:0;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            </div>
+        `;
+    }
+    
+    async function ntpDeleteDocument(id) {
+        if (!confirm('Delete this reference document?')) return;
+        const data = await ntpFetch(`/api/reference-document/${id}/delete/`, 'DELETE');
+        if (data.success) {
+            const els = document.querySelectorAll(`[data-doc-id="${id}"]`);
+            els.forEach(el => el.remove());
+            NTP.notes.forEach(n => { if(n.documents) n.documents = n.documents.filter(d => d.id !== id); });
+            NTP.todos.forEach(t => { if(t.documents) t.documents = t.documents.filter(d => d.id !== id); });
+        }
     }
 
     function ntpRenderNotes() {
@@ -974,6 +1022,7 @@
                 <div id="note-expand-${n.id}" style="display:none;margin-top:10px;font-size:.84rem;color:#374151;
                     background:#f9fafb;border-radius:8px;padding:10px 12px;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;">
                     ${escHtml(n.content || '(no content)')}
+                    ${n.documents && n.documents.length ? `<div style="margin-top:8px;border-top:1px solid #e5e7eb;padding-top:8px;">${n.documents.map(renderDocumentItem).join('')}</div>` : ''}
                 </div>
             </div>
         `).join('');
@@ -994,6 +1043,10 @@
         document.getElementById('ntp-modal-heading').textContent = 'New Note';
         document.getElementById('ntp-modal-title').value = title;
         document.getElementById('ntp-modal-content').value = '';
+        document.getElementById('ntp-modal-docs').value = '';
+        document.getElementById('ntp-modal-doc-ref').value = '';
+        const existingDocsContainer = document.getElementById('ntp-modal-existing-docs');
+        if (existingDocsContainer) { existingDocsContainer.innerHTML = ''; existingDocsContainer.style.display = 'none'; }
         openNoteModal();
         titleInput.value = '';
     }
@@ -1005,6 +1058,13 @@
         document.getElementById('ntp-modal-heading').textContent = 'Edit Note';
         document.getElementById('ntp-modal-title').value = note.title;
         document.getElementById('ntp-modal-content').value = note.content || '';
+        document.getElementById('ntp-modal-docs').value = '';
+        document.getElementById('ntp-modal-doc-ref').value = '';
+        const existingDocsContainer = document.getElementById('ntp-modal-existing-docs');
+        if (existingDocsContainer) {
+            existingDocsContainer.innerHTML = note.documents && note.documents.length ? note.documents.map(renderDocumentItem).join('') : '';
+            existingDocsContainer.style.display = note.documents && note.documents.length ? 'block' : 'none';
+        }
         openNoteModal();
     }
 
@@ -1022,20 +1082,32 @@
     async function ntpSaveNote() {
         const title   = document.getElementById('ntp-modal-title').value.trim();
         const content = document.getElementById('ntp-modal-content').value;
+        const files = document.getElementById('ntp-modal-docs').files;
+        const docRef = document.getElementById('ntp-modal-doc-ref').value;
+        
         if (!title) { alert('Title is required.'); return; }
 
         const btn = document.getElementById('ntp-modal-save-btn');
         btn.textContent = 'Saving…'; btn.disabled = true;
 
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('content', content);
+        for(let i=0; i<files.length; i++) {
+            formData.append('documents', files[i]);
+            formData.append('document_references', docRef);
+        }
+
         let data;
         if (NTP.editingNoteId) {
-            data = await ntpFetch(`/api/my/notes/${NTP.editingNoteId}/`, 'PATCH', { title, content });
+            // PATCH doesn't accept multipart in Django by default, so we send POST which the backend accepts
+            data = await ntpFetch(`/api/my/notes/${NTP.editingNoteId}/`, 'POST', formData);
             if (data.success) {
                 const idx = NTP.notes.findIndex(n => n.id === NTP.editingNoteId);
                 if (idx >= 0) NTP.notes[idx] = data.note;
             }
         } else {
-            data = await ntpFetch('/api/my/notes/', 'POST', { title, content });
+            data = await ntpFetch('/api/my/notes/', 'POST', formData);
             if (data.success) NTP.notes.unshift(data.note);
         }
 
@@ -1083,6 +1155,7 @@
                     <div id="todo-view-${t.id}" style="">
                         <span style="font-size:.87rem;font-weight:600;color:#1f2937;${ t.is_completed ? 'text-decoration:line-through;color:#9ca3af;' : '' }">${escHtml(t.title)}</span>
                         ${t.description ? `<div style="font-size:.78rem;color:#6b7280;margin-top:2px;word-break:break-word;white-space:pre-wrap;">${escHtml(t.description)}</div>` : ''}
+                        ${t.documents && t.documents.length ? `<div style="margin-top:6px;">${t.documents.map(renderDocumentItem).join('')}</div>` : ''}
                         ${t.updated_at ? `<div style="font-size:.72rem;color:#9ca3af;margin-top:3px;">✏️ Edited: ${t.updated_at}</div>` : ''}
                     </div>
                 </div>
@@ -1104,7 +1177,14 @@
                     style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:.82rem;margin-bottom:6px;box-sizing:border-box;outline:none;">
                 <textarea id="todo-edit-desc-${t.id}" rows="2" placeholder="Description (optional)"
                     style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:.8rem;resize:vertical;box-sizing:border-box;outline:none;font-family:inherit;">${escHtml(t.description)}</textarea>
-                <div style="display:flex;gap:8px;margin-top:6px;justify-content:flex-end;">
+                
+                <div style="margin-top:6px;margin-bottom:6px;">
+                    ${t.documents && t.documents.length ? `<div style="margin-bottom:6px;">${t.documents.map(renderDocumentItem).join('')}</div>` : ''}
+                    <input id="todo-edit-docs-${t.id}" type="file" multiple style="font-size:0.75rem;width:100%;margin-bottom:4px;">
+                    <input id="todo-edit-doc-ref-${t.id}" type="text" placeholder="Document Reference" style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:4px 6px;font-size:0.75rem;box-sizing:border-box;outline:none;">
+                </div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
                     <button onclick="cancelTodoEdit('${t.id}')" style="padding:5px 14px;border:1px solid #d1d5db;border-radius:6px;background:#fff;font-size:.8rem;cursor:pointer;">Cancel</button>
                     <button onclick="ntpSaveTodoEdit('${t.id}')" style="padding:5px 14px;border:none;border-radius:6px;background:#059669;color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;">Save</button>
                 </div>
@@ -1124,7 +1204,9 @@
         const input = document.getElementById('ntp-todo-title-input');
         const title = input.value.trim();
         if (!title) { input.focus(); return; }
-        const data = await ntpFetch('/api/my/todos/', 'POST', { title });
+        const fd = new FormData();
+        fd.append('title', title);
+        const data = await ntpFetch('/api/my/todos/', 'POST', fd);
         if (data.success) {
             NTP.todos.unshift(data.todo);
             ntpRenderTodos();
@@ -1135,7 +1217,7 @@
     }
 
     async function ntpToggleTodo(id, checked) {
-        const data = await ntpFetch(`/api/my/todos/${id}/`, 'PATCH', { is_completed: checked });
+        const data = await ntpFetch(`/api/my/todos/${id}/`, 'POST', (() => { const fd = new FormData(); fd.append('is_completed', checked); return fd; })());
         if (data.success) {
             const idx = NTP.todos.findIndex(t => t.id === id);
             if (idx >= 0) NTP.todos[idx] = data.todo;
@@ -1162,8 +1244,20 @@
     async function ntpSaveTodoEdit(id) {
         const title = document.getElementById('todo-edit-title-' + id).value.trim();
         const desc  = document.getElementById('todo-edit-desc-'  + id).value;
+        const files = document.getElementById('todo-edit-docs-' + id).files;
+        const docRef = document.getElementById('todo-edit-doc-ref-' + id).value;
+
         if (!title) { alert('Title cannot be empty.'); return; }
-        const data = await ntpFetch(`/api/my/todos/${id}/`, 'PATCH', { title, description: desc });
+        
+        const fd = new FormData();
+        fd.append('title', title);
+        fd.append('description', desc);
+        for(let i=0; i<files.length; i++) {
+            fd.append('documents', files[i]);
+            fd.append('document_references', docRef);
+        }
+
+        const data = await ntpFetch(`/api/my/todos/${id}/`, 'POST', fd);
         if (data.success) {
             const idx = NTP.todos.findIndex(t => t.id === id);
             if (idx >= 0) NTP.todos[idx] = data.todo;
