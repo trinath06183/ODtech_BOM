@@ -46,6 +46,15 @@ SESSION_COOKIE_SECURE = not DEBUG
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+SECURE_SSL_REDIRECT = not DEBUG
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_REFERRER_POLICY = 'same-origin'
+
+# Axes Configuration
+AXES_FAILURE_LIMIT = 3
+AXES_COOLOFF_TIME = 24  # 24 hours
 
 # Application definition
 
@@ -58,6 +67,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'tracker',
+    'axes',
 ]
 
 MIDDLEWARE = [
@@ -70,6 +80,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'tracker.middleware.CurrentUserMiddleware',
     'tracker.middleware.ErrorLoggingMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -179,3 +190,4 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Auto logout after 30 minutes of inactivity
 SESSION_COOKIE_AGE = 1800  # 30 minutes * 60 seconds
 SESSION_SAVE_EVERY_REQUEST = True
+AUTHENTICATION_BACKENDS = ['axes.backends.AxesStandaloneBackend', 'django.contrib.auth.backends.ModelBackend']

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
@@ -14,7 +14,7 @@ def custom_logout(request):
     return redirect('login')
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('super_user/', admin.site.urls),
     path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
     path('accounts/logout/', custom_logout, name='logout'),
     path('', include('tracker.urls')),

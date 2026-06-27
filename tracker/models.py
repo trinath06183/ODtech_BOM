@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.contrib.auth.models import User
+from .validators import validate_safe_file
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -99,7 +100,7 @@ class Product(models.Model):
     description = models.TextField(blank=True, null=True)
     quantity = models.PositiveIntegerField()
     uom = models.CharField(max_length=50, default='Pcs')
-    photo_or_document = models.FileField(upload_to='product_docs/', blank=True, null=True)
+    photo_or_document = models.FileField(upload_to='product_docs/', blank=True, null=True, validators=[validate_safe_file])
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='OPEN')
     customer_stage = models.CharField(
         max_length=30,
@@ -173,7 +174,7 @@ class SupplierCostOption(models.Model):
     gst_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=18.00)
     total_inc_gst = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     product_link = models.URLField(max_length=500, blank=True, null=True, verbose_name="Product Link")
-    photo_or_document = models.FileField(upload_to='supplier_quotes/', blank=True, null=True, verbose_name="Photo or Document")
+    photo_or_document = models.FileField(upload_to='supplier_quotes/', blank=True, null=True, verbose_name="Photo or Document", validators=[validate_safe_file])
 
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='supplier_options_created')
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='supplier_options_updated')
@@ -434,7 +435,7 @@ class UserReferenceDocument(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reference_documents')
     note = models.ForeignKey(UserNote, on_delete=models.CASCADE, related_name='documents', null=True, blank=True)
     todo = models.ForeignKey(UserTodo, on_delete=models.CASCADE, related_name='documents', null=True, blank=True)
-    document = models.FileField(upload_to='user_references/')
+    document = models.FileField(upload_to='user_references/', validators=[validate_safe_file])
     reference_text = models.CharField(max_length=500, blank=True, help_text="Text box for document reference")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 

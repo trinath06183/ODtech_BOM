@@ -25,6 +25,13 @@
                         {% if user.is_superuser %}Admin{% elif user.is_staff %}Staff{% else %}User{% endif %}
                     </span>
                 </div>
+                {% if user.is_superuser or user.is_staff %}
+                <div class="mt-6">
+                    <a href="/super_user/" target="_blank" class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors w-full">
+                        Django Admin Panel
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
