@@ -187,6 +187,15 @@
                     Internal Note
                 </button>
 
+                <!-- Share -->
+                <button type="button" onclick="bulkTabSelect('share')"
+                        id="bulk-tab-share"
+                        class="bulk-tab inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all
+                               border-sky-300 text-sky-700 bg-sky-50 hover:bg-sky-100">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                    Share
+                </button>
+
                 <!-- Delete -->
                 <button type="button" onclick="bulkTabSelect('delete')"
                         id="bulk-tab-delete"
@@ -334,6 +343,21 @@
                 </div>
             </div>
 
+            <!-- Share -->
+            <div id="bulk-panel-share" class="bulk-panel hidden bg-sky-50 border border-sky-200 rounded-xl p-4 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-semibold text-sky-900">Share Product Details</p>
+                        <p class="text-xs text-sky-600">Select products using checkboxes, then preview and download the structured product list.</p>
+                    </div>
+                    <button type="button" onclick="openSharePreview()"
+                            class="inline-flex items-center gap-2 px-5 py-2 border border-transparent text-sm font-semibold rounded-md shadow-sm text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        Preview &amp; Share
+                    </button>
+                </div>
+            </div>
+
             <!-- Delete -->
             <div id="bulk-panel-delete" class="bulk-panel hidden bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm">
                 <div class="flex flex-wrap items-center justify-between gap-3">
@@ -377,6 +401,14 @@
                             {% endif %}
                             <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Purchased</th>
                             <th scope="col" class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[160px]">
+                                Stage
+                                <div class="flex justify-center gap-2 mt-0.5">
+                                    <span class="text-[9px] font-medium text-indigo-400 uppercase tracking-wider">Customer</span>
+                                    <span class="text-gray-300">/</span>
+                                    <span class="text-[9px] font-medium text-amber-400 uppercase tracking-wider">Supplier</span>
+                                </div>
+                            </th>
                             <th scope="col" class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
@@ -437,7 +469,8 @@
                             data-has-price="{% if product.cached_selected_supplier and product.cached_selected_supplier.base_price > 0 %}true{% else %}false{% endif %}"
                             data-purchased="{% if product.is_purchased %}true{% else %}false{% endif %}"
                             data-status="{{ product.status }}"
-                            data-product-id="{{ product.id }}">
+                            data-product-id="{{ product.id }}"
+                            data-stage="{{ product.product_stage|default:'' }}">
 
                             <!-- Bulk checkbox -->
                             <td x-show="bulkOpen" class="px-4 py-4 whitespace-nowrap" @click.stop>
@@ -588,6 +621,68 @@
                                     <option value="SHIPPED" {% if product.status == 'SHIPPED' %}selected{% endif %}>SHIPPED</option>
                                     <option value="RECEIVED" {% if product.status == 'RECEIVED' %}selected{% endif %}>RECEIVED</option>
                                     <option value="CLOSED" {% if product.status == 'CLOSED' %}selected{% endif %}>CLOSED</option>
+                                </select>
+                            </td>
+
+                            <!-- Dual Stage Cell (compact) -->
+                            <td class="px-1.5 py-1.5 text-center w-[170px]" @click.stop
+                                x-data="productStageCell('{{ product.id }}', '{{ product.customer_stage|default:'' }}', '{{ product.supplier_stage|default:'' }}')">
+
+                                <!-- Customer row -->
+                                <div class="flex items-center gap-0.5 mb-0.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span>
+                                    <span class="text-[9px] font-bold text-indigo-400 uppercase tracking-wider leading-none">Customer</span>
+                                    <span x-show="customerSaving" class="ml-auto">
+                                        <svg class="animate-spin h-2.5 w-2.5 text-indigo-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                                    </span>
+                                </div>
+                                <!-- Customer badge — only rendered when set -->
+                                <div x-show="customerStage && !customerSaving" class="mb-0.5">
+                                    <span class="inline-flex items-center px-1.5 py-px rounded-full text-[9px] font-bold bg-indigo-100 text-indigo-700 max-w-full leading-tight">
+                                        <span class="truncate" x-text="stageLabel(customerStage)"></span>
+                                    </span>
+                                </div>
+                                <!-- Customer select -->
+                                <select @change="setStage('customer', $event.target.value)"
+                                        class="w-full text-[10px] border border-indigo-200 rounded py-px px-1 bg-indigo-50 text-indigo-700 focus:ring-1 focus:ring-indigo-300 cursor-pointer leading-tight mb-1"
+                                        :disabled="customerSaving">
+                                    <option value="">— clear —</option>
+                                    <option value="REQ_RECEIVED"  {% if product.customer_stage == 'REQ_RECEIVED'  %}selected{% endif %}>Requirement Received</option>
+                                    <option value="QUOT_GIVEN"    {% if product.customer_stage == 'QUOT_GIVEN'    %}selected{% endif %}>Quotation Given</option>
+                                    <option value="PO_RECEIVED"   {% if product.customer_stage == 'PO_RECEIVED'   %}selected{% endif %}>PO Received</option>
+                                    <option value="PI_GIVEN"      {% if product.customer_stage == 'PI_GIVEN'      %}selected{% endif %}>PI Given</option>
+                                    <option value="PROD_GIVEN"    {% if product.customer_stage == 'PROD_GIVEN'    %}selected{% endif %}>Product Given</option>
+                                    <option value="INV_GIVEN"     {% if product.customer_stage == 'INV_GIVEN'     %}selected{% endif %}>Invoice Given</option>
+                                </select>
+
+                                <!-- Divider -->
+                                <div class="border-t border-gray-100 mb-1"></div>
+
+                                <!-- Supplier row -->
+                                <div class="flex items-center gap-0.5 mb-0.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></span>
+                                    <span class="text-[9px] font-bold text-amber-500 uppercase tracking-wider leading-none">Supplier</span>
+                                    <span x-show="supplierSaving" class="ml-auto">
+                                        <svg class="animate-spin h-2.5 w-2.5 text-amber-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                                    </span>
+                                </div>
+                                <!-- Supplier badge — only rendered when set -->
+                                <div x-show="supplierStage && !supplierSaving" class="mb-0.5">
+                                    <span class="inline-flex items-center px-1.5 py-px rounded-full text-[9px] font-bold bg-amber-100 text-amber-700 max-w-full leading-tight">
+                                        <span class="truncate" x-text="stageLabel(supplierStage)"></span>
+                                    </span>
+                                </div>
+                                <!-- Supplier select -->
+                                <select @change="setStage('supplier', $event.target.value)"
+                                        class="w-full text-[10px] border border-amber-200 rounded py-px px-1 bg-amber-50 text-amber-700 focus:ring-1 focus:ring-amber-300 cursor-pointer leading-tight"
+                                        :disabled="supplierSaving">
+                                    <option value="">— clear —</option>
+                                    <option value="REQ_SEARCHING" {% if product.supplier_stage == 'REQ_SEARCHING' %}selected{% endif %}>Requirement Searching</option>
+                                    <option value="QUOT_RECEIVED" {% if product.supplier_stage == 'QUOT_RECEIVED' %}selected{% endif %}>Quotation Received</option>
+                                    <option value="PO_GIVEN"      {% if product.supplier_stage == 'PO_GIVEN'      %}selected{% endif %}>PO Given</option>
+                                    <option value="PI_RECEIVED"   {% if product.supplier_stage == 'PI_RECEIVED'   %}selected{% endif %}>PI Received</option>
+                                    <option value="PROD_RECEIVED" {% if product.supplier_stage == 'PROD_RECEIVED' %}selected{% endif %}>Product Received</option>
+                                    <option value="INV_RECEIVED"  {% if product.supplier_stage == 'INV_RECEIVED'  %}selected{% endif %}>Invoice Received</option>
                                 </select>
                             </td>
 
@@ -865,6 +960,103 @@
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- Share Preview Modal                                    -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div id="share-preview-modal" style="display:none;" class="fixed z-[70] inset-0 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen px-4 py-8">
+            <!-- Backdrop -->
+            <div class="fixed inset-0 bg-gray-900/70 backdrop-blur-sm transition-opacity" onclick="closeSharePreview()"></div>
+
+            <!-- Modal Panel -->
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+
+                <!-- Header -->
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-sky-600 to-indigo-600 rounded-t-2xl">
+                    <div class="flex items-center gap-3">
+                        <div class="h-9 w-9 rounded-lg bg-white/20 flex items-center justify-center">
+                            <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-white font-semibold text-lg leading-tight">Share Product Details</h3>
+                            <p class="text-sky-100 text-xs" id="share-modal-subtitle">Selected products overview</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeSharePreview()" class="text-white/70 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/20">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- Date bar only -->
+                <div class="px-6 py-2.5 bg-sky-50 border-b border-sky-100 flex items-center justify-end text-sm">
+                    <div class="flex items-center gap-1.5 text-sky-700">
+                        <svg class="h-4 w-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span id="share-modal-date" class="text-xs"></span>
+                    </div>
+                </div>
+
+                <!-- Table Body -->
+                <div class="flex-1 overflow-auto px-6 py-4" id="share-preview-table-wrapper">
+                    <table class="min-w-full border-collapse" id="share-preview-table">
+                        <thead>
+                            <tr class="bg-gradient-to-r from-sky-600 to-indigo-600">
+                                <th class="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider rounded-tl-lg">Sl. No.</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Product Name</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Description</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Remark</th>
+                                <th class="px-4 py-3 text-right text-xs font-bold text-white uppercase tracking-wider">Quantity</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-white uppercase tracking-wider rounded-tr-lg">UOM</th>
+                            </tr>
+                        </thead>
+                        <tbody id="share-preview-tbody" class="divide-y divide-gray-100">
+                            <!-- Populated by JS -->
+                        </tbody>
+                        <tfoot id="share-preview-tfoot">
+                            <!-- Totals row populated by JS -->
+                        </tfoot>
+                    </table>
+                    <!-- Empty state -->
+                    <div id="share-empty-state" class="hidden py-16 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        <p class="text-gray-400 text-sm font-medium">No products selected.</p>
+                        <p class="text-gray-400 text-xs mt-1">Please select products using the checkboxes in the table.</p>
+                    </div>
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+                    <p class="text-xs text-gray-500" id="share-product-count"></p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" onclick="closeSharePreview()"
+                                id="share-btn-close"
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
+                            Close
+                        </button>
+                        <button type="button" onclick="downloadShareAsImage()"
+                                id="share-btn-image"
+                                class="share-dl-btn inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-lg text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 transition-colors shadow-sm">
+                            <svg id="share-btn-image-icon" class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span id="share-btn-image-label">Download Image</span>
+                        </button>
+                        <button type="button" onclick="downloadShareAsExcel()"
+                                id="share-btn-excel"
+                                class="share-dl-btn inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm">
+                            <svg id="share-btn-excel-icon" class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span id="share-btn-excel-label">Download Excel</span>
+                        </button>
+                        <button type="button" onclick="downloadShareAsPDF()"
+                                id="share-btn-pdf"
+                                class="share-dl-btn inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm">
+                            <svg id="share-btn-pdf-icon" class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span id="share-btn-pdf-label">Download PDF</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- ═══════════════════════════════════════════════════════ -->
 
 </div>
@@ -1598,6 +1790,7 @@ function productListApp() {
         status: { ring: 'ring-blue-400',    bg: 'bg-blue-200',    text: 'text-blue-900'    },
         edit:   { ring: 'ring-violet-400',  bg: 'bg-violet-200',  text: 'text-violet-900'  },
         note:   { ring: 'ring-teal-400',    bg: 'bg-teal-200',    text: 'text-teal-900'    },
+        share:  { ring: 'ring-sky-400',     bg: 'bg-sky-200',     text: 'text-sky-900'     },
         delete: { ring: 'ring-red-400',     bg: 'bg-red-200',     text: 'text-red-900'     },
     };
 
@@ -1988,29 +2181,244 @@ window.navigateProduct = function(direction) {
         return _loadedScripts[src];
     }
 
-    // Export loading overlay
-    function showExportOverlay(msg) {
-        let overlay = document.getElementById('export-overlay');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'export-overlay';
-            overlay.className = 'fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center';
-            overlay.innerHTML = `
-                <div class="bg-white rounded-xl shadow-2xl px-8 py-6 flex flex-col items-center gap-3">
-                    <svg class="animate-spin h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span id="export-overlay-msg" class="text-sm font-semibold text-gray-700"></span>
-                </div>`;
-            document.body.appendChild(overlay);
-        }
-        document.getElementById('export-overlay-msg').textContent = msg || 'Preparing export...';
-        overlay.style.display = 'flex';
+    // ────────────────────────────────────────────────────
+    // Rich progress overlay for Export / Share generation
+    // ────────────────────────────────────────────────────
+
+    // Configuration per generation type
+    const EXPORT_CONFIGS = {
+        image: {
+            color:  '#7c3aed',   // violet-700
+            track:  '#ede9fe',   // violet-100
+            label:  'Image',
+            steps:  ['Loading renderer', 'Styling layout', 'Rendering pixels', 'Saving PNG'],
+            tip:    'High-resolution 2× scale for crisp sharing on any screen.',
+        },
+        excel: {
+            color:  '#059669',   // emerald-600
+            track:  '#d1fae5',
+            label:  'Excel',
+            steps:  ['Loading library', 'Building rows', 'Formatting columns', 'Writing file'],
+            tip:    'Columns are auto-sized to fit content.',
+        },
+        pdf: {
+            color:  '#dc2626',   // red-600
+            track:  '#fee2e2',
+            label:  'PDF',
+            steps:  ['Loading library', 'Composing header', 'Drawing table', 'Saving PDF'],
+            tip:    'Landscape A4 layout with text wrapping enabled.',
+        },
+    };
+
+    let _exportStepTimer  = null;
+    let _exportStepIndex  = 0;
+    let _exportCfg        = null;
+
+    function _buildOverlay() {
+        const el = document.createElement('div');
+        el.id = 'export-overlay';
+        el.style.cssText = [
+            'position:fixed', 'inset:0', 'z-index:9000',
+            'display:flex', 'align-items:center', 'justify-content:center',
+            'background:rgba(15,23,42,0.55)', 'backdrop-filter:blur(6px)',
+            'opacity:0', 'transition:opacity 0.2s ease',
+        ].join(';');
+
+        el.innerHTML = `
+        <div id="export-card" style="
+            background:#fff;
+            border-radius:20px;
+            box-shadow:0 25px 60px rgba(0,0,0,0.25);
+            padding:36px 40px;
+            width:360px;
+            max-width:90vw;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            gap:0;
+            transform:scale(0.92);
+            transition:transform 0.2s ease;
+        ">
+            <!-- Animated ring + icon -->
+            <div style="position:relative;width:72px;height:72px;margin-bottom:24px">
+                <!-- Track circle -->
+                <svg id="exp-ring-svg" viewBox="0 0 72 72" style="position:absolute;inset:0;width:72px;height:72px;transform:rotate(-90deg)">
+                    <circle id="exp-ring-track" cx="36" cy="36" r="30"
+                        fill="none" stroke="#f0f0f0" stroke-width="6"/>
+                    <circle id="exp-ring-bar" cx="36" cy="36" r="30"
+                        fill="none" stroke="#6366f1" stroke-width="6"
+                        stroke-linecap="round"
+                        stroke-dasharray="188.5"
+                        stroke-dashoffset="188.5"
+                        style="transition:stroke-dashoffset 0.6s cubic-bezier(.4,0,.2,1), stroke 0.3s"/>
+                </svg>
+                <!-- Pulsing center dot -->
+                <div id="exp-center-dot" style="
+                    position:absolute;
+                    inset:0;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                ">
+                    <div style="
+                        width:28px;height:28px;
+                        border-radius:50%;
+                        background:#6366f1;
+                        display:flex;align-items:center;justify-content:center;
+                        animation:exp-pulse 1.4s ease-in-out infinite;
+                        transition:background 0.3s;
+                    " id="exp-icon-bg">
+                        <svg id="exp-icon" width="16" height="16" fill="none" stroke="#fff" viewBox="0 0 24 24" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage label -->
+            <div id="exp-stage-title" style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:6px;text-align:center;letter-spacing:-0.01em">Preparing&hellip;</div>
+            <div id="exp-stage-msg" style="font-size:13px;color:#64748b;text-align:center;min-height:18px;margin-bottom:20px"></div>
+
+            <!-- Step dots -->
+            <div id="exp-steps" style="display:flex;gap:8px;margin-bottom:20px"></div>
+
+            <!-- Indeterminate shimmer bar -->
+            <div style="width:100%;height:4px;background:#f1f5f9;border-radius:99px;overflow:hidden;margin-bottom:16px">
+                <div id="exp-shimmer" style="
+                    height:100%;
+                    width:40%;
+                    background:linear-gradient(90deg,transparent,#6366f1,transparent);
+                    border-radius:99px;
+                    animation:exp-shimmer 1.6s ease-in-out infinite;
+                    transition:background 0.3s;
+                " ></div>
+            </div>
+
+            <!-- Tip -->
+            <div id="exp-tip" style="font-size:11px;color:#94a3b8;text-align:center;line-height:1.5"></div>
+        </div>
+
+        <style>
+            @keyframes exp-pulse {
+                0%, 100% { transform: scale(1);   opacity: 1; }
+                50%       { transform: scale(1.12); opacity: 0.85; }
+            }
+            @keyframes exp-shimmer {
+                0%   { transform: translateX(-150%); }
+                100% { transform: translateX(350%); }
+            }
+            @keyframes exp-dot-bounce {
+                0%, 80%, 100% { transform: scale(1);   background: #e2e8f0; }
+                40%           { transform: scale(1.45); }
+            }
+        </style>
+        `;
+
+        document.body.appendChild(el);
+        return el;
     }
-    function hideExportOverlay() {
+
+    function _applyConfig(cfg, stepIndex) {
+        const bar     = document.getElementById('exp-ring-bar');
+        const track   = document.getElementById('exp-ring-track');
+        const iconBg  = document.getElementById('exp-icon-bg');
+        const shimmer = document.getElementById('exp-shimmer');
+        const steps   = document.getElementById('exp-steps');
+
+        if (!bar) return;
+
+        // Color
+        bar.style.stroke       = cfg.color;
+        iconBg.style.background = cfg.color;
+        shimmer.style.background = `linear-gradient(90deg,transparent,${cfg.color},transparent)`;
+
+        // Ring progress
+        const total  = 188.5;
+        const pct    = (stepIndex + 1) / cfg.steps.length;
+        bar.style.strokeDashoffset = total - total * pct;
+
+        // Step dots
+        steps.innerHTML = '';
+        cfg.steps.forEach((label, i) => {
+            const dot = document.createElement('div');
+            const done    = i < stepIndex;
+            const active  = i === stepIndex;
+            dot.title = label;
+            dot.style.cssText = [
+                'width:8px', 'height:8px', 'border-radius:50%',
+                `background:${done ? cfg.color : active ? cfg.color : '#e2e8f0'}`,
+                `opacity:${done ? '1' : active ? '1' : '0.4'}`,
+                `transform:${active ? 'scale(1.5)' : 'scale(1)'}`,
+                'transition:all 0.4s ease',
+            ].join(';');
+            steps.appendChild(dot);
+        });
+    }
+
+    function showExportOverlay(msg, type) {
+        _exportCfg = EXPORT_CONFIGS[type] || EXPORT_CONFIGS.excel;
+        _exportStepIndex = 0;
+
+        let overlay = document.getElementById('export-overlay');
+        if (!overlay) overlay = _buildOverlay();
+
+        // Populate tip
+        const tipEl = document.getElementById('exp-tip');
+        if (tipEl) tipEl.textContent = '💡 ' + _exportCfg.tip;
+
+        // Initial step
+        _setStep(0, msg);
+
+        // Show with fade-in
+        overlay.style.display = 'flex';
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                overlay.style.opacity = '1';
+                const card = document.getElementById('export-card');
+                if (card) card.style.transform = 'scale(1)';
+            });
+        });
+    }
+
+    function _setStep(index, label) {
+        if (!_exportCfg) return;
+        _exportStepIndex = index;
+        _applyConfig(_exportCfg, index);
+
+        const title = document.getElementById('exp-stage-title');
+        const msg   = document.getElementById('exp-stage-msg');
+        if (title) title.textContent = label || _exportCfg.steps[index] || 'Working…';
+        if (msg)   msg.textContent   = `Step ${index + 1} of ${_exportCfg.steps.length}`;
+    }
+
+    function advanceExportStep(label) {
+        if (!_exportCfg) return;
+        _setStep(Math.min(_exportStepIndex + 1, _exportCfg.steps.length - 1), label);
+    }
+
+    function hideExportOverlay(success) {
         const overlay = document.getElementById('export-overlay');
-        if (overlay) overlay.style.display = 'none';
+        if (!overlay) return;
+
+        if (success && _exportCfg) {
+            // Show 100% complete briefly
+            const bar = document.getElementById('exp-ring-bar');
+            if (bar) bar.style.strokeDashoffset = '0';
+            const title = document.getElementById('exp-stage-title');
+            if (title) title.textContent = '✔ Done!';
+            const msgEl = document.getElementById('exp-stage-msg');
+            if (msgEl) msgEl.textContent = `${_exportCfg.label} ready — check your downloads`;
+        }
+
+        const delay = success ? 700 : 0;
+        setTimeout(() => {
+            overlay.style.opacity = '0';
+            const card = document.getElementById('export-card');
+            if (card) card.style.transform = 'scale(0.92)';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 220);
+        }, delay);
     }
 
     function getExportData() {
@@ -2249,6 +2657,562 @@ window.navigateProduct = function(direction) {
             window.location.reload();
         });
     }
+    // ─── Per-product dual stage tracking ─────────────────────────────────
+    const _STAGE_LABELS = {
+        // Customer side
+        REQ_RECEIVED:  'Requirement Received',
+        QUOT_GIVEN:    'Quotation Given',
+        PO_RECEIVED:   'PO Received',
+        PI_GIVEN:      'PI Given',
+        PROD_GIVEN:    'Product Given',
+        INV_GIVEN:     'Invoice Given',
+        // Supplier side
+        REQ_SEARCHING: 'Requirement Searching',
+        QUOT_RECEIVED: 'Quotation Received',
+        PO_GIVEN:      'PO Given',
+        PI_RECEIVED:   'PI Received',
+        PROD_RECEIVED: 'Product Received',
+        INV_RECEIVED:  'Invoice Received',
+    };
+
+    /**
+     * Alpine component for the dual-stage cell.
+     * Each product independently tracks a Customer-side stage and a Supplier-side stage.
+     *
+     * @param {string} productId   - Product UUID
+     * @param {string} initCust    - Initial customer_stage value (or empty string)
+     * @param {string} initSupp    - Initial supplier_stage value (or empty string)
+     */
+    function productStageCell(productId, initCust, initSupp) {
+        return {
+            productId,
+            customerStage:  initCust || '',
+            supplierStage:  initSupp || '',
+            customerSaving: false,
+            supplierSaving: false,
+
+            stageLabel(s) { return _STAGE_LABELS[s] || s; },
+
+            /**
+             * Post a stage update for one side.
+             * @param {'customer'|'supplier'} side
+             * @param {string} value  - new stage code, or '' to clear
+             */
+            async setStage(side, value) {
+                const savingKey = side === 'customer' ? 'customerSaving' : 'supplierSaving';
+                const stageKey  = side === 'customer' ? 'customerStage'  : 'supplierStage';
+
+                if (this[savingKey]) return;           // prevent double-tap
+                const prev = this[stageKey];
+                this[savingKey] = true;
+                this[stageKey]  = value;               // optimistic update
+
+                try {
+                    const res = await fetch(`/api/product/${this.productId}/stage/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        },
+                        body: JSON.stringify({ side, stage: value }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        this[stageKey] = data.stage || '';
+                        // Keep data-attributes on the TR in sync for potential future filtering
+                        const tr = this.$el.closest('tr[data-product-id]');
+                        if (tr) tr.dataset[side + 'Stage'] = this[stageKey];
+                        if (window.showGlobalNotification) {
+                            const lbl = data.stage ? (_STAGE_LABELS[data.stage] || data.stage) : `${side} stage cleared`;
+                            window.showGlobalNotification(`${side.charAt(0).toUpperCase() + side.slice(1)} stage: ${lbl}`, 'success');
+                        }
+                    } else {
+                        this[stageKey] = prev;         // rollback
+                        if (window.showGlobalNotification) window.showGlobalNotification(data.error || 'Failed to update stage', 'error');
+                        else alert(data.error || 'Failed to update stage');
+                    }
+                } catch(e) {
+                    this[stageKey] = prev;             // rollback
+                    console.error('Stage update error:', e);
+                    if (window.showGlobalNotification) window.showGlobalNotification('Network error updating stage', 'error');
+                } finally {
+                    this[savingKey] = false;
+                }
+            },
+        };
+    }
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- Share Product Details — Preview & Download                  -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+    // ── Collect data from selected checkboxes ──
+    function getSelectedProductsData() {
+        const checked = Array.from(document.querySelectorAll('.product-checkbox:checked'));
+        if (checked.length === 0) return [];
+
+        return checked.map(cb => {
+            const row = cb.closest('tr[data-product-id]');
+            if (!row) return null;
+
+            // Sl No
+            const slNoEl = row.querySelector('td.whitespace-nowrap.text-sm.font-medium.text-gray-900 span[x-show]');
+            const slNo = slNoEl ? slNoEl.textContent.trim() : (row.dataset.slNo || '');
+
+            // Product Name
+            const nameLink = row.querySelector('a[href="javascript:void(0)"]');
+            const itemName = nameLink ? nameLink.textContent.trim() : (row.dataset.name || '');
+
+            return {
+                slNo:        slNo,
+                itemName:    itemName,
+                description: row.dataset.description || '',
+                remark:      row.dataset.remark       || '',
+                quantity:    row.dataset.qty           || '',
+                uom:         row.dataset.uom           || '',
+            };
+        }).filter(Boolean);
+    }
+
+    // ── Render table rows ──
+    function renderShareTable(products) {
+        const tbody = document.getElementById('share-preview-tbody');
+        const tfoot = document.getElementById('share-preview-tfoot');
+        const emptyState = document.getElementById('share-empty-state');
+        const tableWrapper = document.getElementById('share-preview-table');
+        const countEl = document.getElementById('share-product-count');
+        const subtitle = document.getElementById('share-modal-subtitle');
+
+        tbody.innerHTML = '';
+        tfoot.innerHTML = '';
+
+        if (products.length === 0) {
+            tableWrapper.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+            countEl.textContent = '';
+            subtitle.textContent = 'No products selected';
+            return;
+        }
+
+        tableWrapper.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+        subtitle.textContent = `${products.length} product${products.length > 1 ? 's' : ''} selected`;
+        countEl.textContent = `${products.length} product${products.length > 1 ? 's' : ''} included`;
+
+        let totalQty = 0;
+        products.forEach((p, idx) => {
+            const qty = parseFloat(p.quantity) || 0;
+            totalQty += qty;
+
+            const isEven = idx % 2 === 0;
+            const tr = document.createElement('tr');
+            tr.className = isEven ? 'bg-white hover:bg-sky-50/40 transition-colors' : 'bg-slate-50/60 hover:bg-sky-50/40 transition-colors';
+            tr.innerHTML = `
+                <td class="px-4 py-3 text-sm font-semibold text-gray-700 align-top">${escHtml(p.slNo)}</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900 align-top break-words" style="min-width:120px;max-width:220px;white-space:normal;word-break:break-word">${escHtml(p.itemName)}</td>
+                <td class="px-4 py-3 text-sm text-gray-600 align-top break-words" style="min-width:160px;max-width:300px;white-space:normal;word-break:break-word">${escHtml(p.description) || '<span class="text-gray-300 italic text-xs">&mdash;</span>'}</td>
+                <td class="px-4 py-3 text-sm text-gray-600 align-top break-words" style="min-width:140px;max-width:260px;white-space:normal;word-break:break-word">${escHtml(p.remark) || '<span class="text-gray-300 italic text-xs">&mdash;</span>'}</td>
+                <td class="px-4 py-3 text-sm font-semibold text-gray-900 text-right align-top">${escHtml(p.quantity)}</td>
+                <td class="px-4 py-3 text-sm font-medium text-sky-700 align-top">
+                    <span style="display:inline-block;background:#e0f2fe;border-radius:9999px;padding:2px 10px;font-size:11px;font-weight:600;line-height:1.6;white-space:nowrap">${escHtml(p.uom) || '&mdash;'}</span>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Totals row
+        const tfootTr = document.createElement('tr');
+        tfootTr.className = 'border-t-2 border-sky-300';
+        tfootTr.style.background = 'linear-gradient(to right, rgba(14,165,233,0.12), rgba(99,102,241,0.12))';
+        tfootTr.innerHTML = `
+            <td colspan="4" class="px-4 py-3 text-sm font-bold text-sky-800">Total (${products.length} item${products.length > 1 ? 's' : ''})</td>
+            <td class="px-4 py-3 text-sm font-bold text-gray-900 text-right">${totalQty}</td>
+            <td class="px-4 py-3 text-sm text-gray-500 text-center text-xs">&mdash;</td>
+        `;
+        tfoot.appendChild(tfootTr);
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    // ── Open Modal ──
+    window.openSharePreview = function () {
+        const products = getSelectedProductsData();
+        if (products.length === 0) {
+            if (window.showGlobalNotification) {
+                window.showGlobalNotification('Please select at least one product first.', 'warning');
+            } else {
+                alert('Please select at least one product.');
+            }
+            return;
+        }
+
+        // Set date
+        const dateEl = document.getElementById('share-modal-date');
+        if (dateEl) dateEl.textContent = 'Generated: ' + new Date().toLocaleString();
+
+        renderShareTable(products);
+
+        const modal = document.getElementById('share-preview-modal');
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    };
+
+    // ── Close Modal ──
+    window.closeSharePreview = function () {
+        const modal = document.getElementById('share-preview-modal');
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    };
+
+    // ── Build plain data rows for export ──
+    function getShareExportRows() {
+        const products = getSelectedProductsData();
+        return products.map(p => ({
+            'Sl. No.':        p.slNo,
+            'Product Name':   p.itemName,
+            'Description':    p.description,
+            'Remark':         p.remark,
+            'Quantity':       p.quantity,
+            'UOM':            p.uom,
+        }));
+    }
+
+    // ── Button loading state helpers ──
+    const _SPIN_SVG = `<svg class="animate-spin h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>`;
+    const _BTN_META = {
+        image: { id: 'share-btn-image', label: 'Generating…' },
+        excel: { id: 'share-btn-excel', label: 'Generating…' },
+        pdf:   { id: 'share-btn-pdf',   label: 'Generating…' },
+    };
+    const _BTN_DEFAULTS = {
+        image: { iconId: 'share-btn-image-icon', labelId: 'share-btn-image-label', labelText: 'Download Image' },
+        excel: { iconId: 'share-btn-excel-icon', labelId: 'share-btn-excel-label', labelText: 'Download Excel' },
+        pdf:   { iconId: 'share-btn-pdf-icon',   labelId: 'share-btn-pdf-label',   labelText: 'Download PDF'   },
+    };
+
+    function setShareButtonsLoading(active, type) {
+        document.querySelectorAll('.share-dl-btn').forEach(btn => {
+            btn.disabled = active;
+            btn.style.opacity = active ? '0.65' : '1';
+            btn.style.cursor  = active ? 'not-allowed' : '';
+        });
+        if (!active) {
+            // Restore all icons & labels
+            Object.entries(_BTN_DEFAULTS).forEach(([key, d]) => {
+                const icon  = document.getElementById(d.iconId);
+                const label = document.getElementById(d.labelId);
+                if (icon)  icon.outerHTML  = icon.outerHTML; // no-op needed below
+                const btn = document.getElementById(_BTN_META[key]?.id);
+                if (btn) {
+                    // Rebuild icon
+                    const iconEl = btn.querySelector('svg');
+                    if (iconEl) iconEl.outerHTML = _getOriginalIcon(key);
+                    const labelEl = document.getElementById(d.labelId);
+                    if (labelEl) labelEl.textContent = d.labelText;
+                }
+            });
+        } else if (type) {
+            const meta = _BTN_META[type];
+            if (!meta) return;
+            const btn = document.getElementById(meta.id);
+            if (!btn) return;
+            const iconEl = btn.querySelector('svg');
+            if (iconEl) iconEl.outerHTML = _SPIN_SVG;
+            const labelEl = document.getElementById(meta.id + '-label');
+            if (labelEl) labelEl.textContent = meta.label;
+        }
+    }
+
+    function _getOriginalIcon(type) {
+        const icons = {
+            image: `<svg id="share-btn-image-icon" class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`,
+            excel: `<svg id="share-btn-excel-icon" class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`,
+            pdf:   `<svg id="share-btn-pdf-icon" class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`,
+        };
+        return icons[type] || '';
+    }
+
+    // ── Download as Excel ──
+    window.downloadShareAsExcel = async function () {
+        const rows = getShareExportRows();
+        if (rows.length === 0) { alert('No products to export.'); return; }
+
+        setShareButtonsLoading(true, 'excel');
+        showExportOverlay('Loading Excel library…', 'excel');
+        let success = false;
+        try {
+            await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+            advanceExportStep('Building rows…');
+
+            const ws = XLSX.utils.json_to_sheet(rows);
+            advanceExportStep('Formatting columns…');
+
+            // Auto-fit columns
+            const cols = Object.keys(rows[0]);
+            const maxLens = {};
+            cols.forEach(k => maxLens[k] = k.length);
+            rows.forEach(row => cols.forEach(k => {
+                maxLens[k] = Math.max(maxLens[k], String(row[k] || '').length);
+            }));
+            ws['!cols'] = cols.map(k => ({ wch: maxLens[k] + 4 }));
+            advanceExportStep('Writing file…');
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Products');
+
+            const filename = `Product_List_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, filename);
+            success = true;
+        } catch (e) {
+            console.error('Excel export error:', e);
+            alert('Failed to generate Excel. Please try again.');
+        } finally {
+            hideExportOverlay(success);
+            setTimeout(() => setShareButtonsLoading(false), success ? 900 : 0);
+        }
+    };
+
+    // ── Download as PDF ──
+    window.downloadShareAsPDF = async function () {
+        const rows = getShareExportRows();
+        if (rows.length === 0) { alert('No products to export.'); return; }
+
+        setShareButtonsLoading(true, 'pdf');
+        showExportOverlay('Loading PDF library…', 'pdf');
+        let success = false;
+        try {
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js');
+            advanceExportStep('Composing header…');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const pageW = doc.internal.pageSize.getWidth();
+
+            doc.setFontSize(16);
+            doc.setTextColor(3, 105, 161);
+            doc.text('Product Details', 14, 16);
+            doc.setFontSize(9);
+            doc.setTextColor(100);
+            doc.text('Generated: ' + new Date().toLocaleString(), pageW - 14, 16, { align: 'right' });
+
+            advanceExportStep('Drawing table…');
+
+            const headers = [['Sl. No.', 'Product Name', 'Description', 'Remark', 'Quantity', 'UOM']];
+            const body    = rows.map(r => [
+                r['Sl. No.'], r['Product Name'], r['Description'],
+                r['Remark'],  r['Quantity'],     r['UOM'],
+            ]);
+            const totalQty = rows.reduce((s, r) => s + (parseFloat(r['Quantity']) || 0), 0);
+            body.push(['', `Total (${rows.length} items)`, '', '', totalQty, '']);
+
+            doc.autoTable({
+                head: headers,
+                body: body,
+                startY: 22,
+                theme: 'striped',
+                styles: { fontSize: 8, cellPadding: 2.5, overflow: 'linebreak', valign: 'top' },
+                headStyles: { fillColor: [2, 132, 199], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 15 },
+                    1: { cellWidth: 50 },
+                    2: { cellWidth: 60 },
+                    3: { cellWidth: 55 },
+                    4: { halign: 'right', cellWidth: 20 },
+                    5: { halign: 'left',  cellWidth: 22 },
+                },
+                didParseCell: function (data) {
+                    if (data.row.index === body.length - 1) {
+                        data.cell.styles.fontStyle  = 'bold';
+                        data.cell.styles.fillColor  = [224, 242, 254];
+                        data.cell.styles.textColor  = [3, 105, 161];
+                    }
+                },
+                margin: { top: 20, left: 14, right: 14 },
+            });
+
+            advanceExportStep('Saving PDF…');
+            const filename = `Product_List_${new Date().toISOString().slice(0,10)}.pdf`;
+            doc.save(filename);
+            success = true;
+        } catch (e) {
+            console.error('PDF export error:', e);
+            alert('Failed to generate PDF. Please try again.');
+        } finally {
+            hideExportOverlay(success);
+            setTimeout(() => setShareButtonsLoading(false), success ? 900 : 0);
+        }
+    };
+
+    // ── Download as Image (PNG) via html2canvas ──
+    window.downloadShareAsImage = async function () {
+        const table = document.getElementById('share-preview-table');
+        if (!table || table.classList.contains('hidden')) {
+            if (window.showGlobalNotification) window.showGlobalNotification('No products to capture.', 'warning');
+            else alert('No products to capture.');
+            return;
+        }
+
+        setShareButtonsLoading(true, 'image');
+        showExportOverlay('Loading renderer…', 'image');
+        let success = false;
+        try {
+            await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+            advanceExportStep('Styling layout…');
+
+            const dateStr = new Date().toLocaleString();
+
+            // Build off-screen render element
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = [
+                'position:absolute', 'top:-99999px', 'left:-99999px',
+                'background:#ffffff',
+                'font-family:ui-sans-serif,system-ui,-apple-system,sans-serif',
+                'padding:32px', 'width:900px', 'box-sizing:border-box',
+            ].join(';');
+
+            const headerBar = document.createElement('div');
+            headerBar.style.cssText = [
+                'background:linear-gradient(135deg,#0284c7,#4f46e5)',
+                'border-radius:12px 12px 0 0',
+                'padding:20px 24px',
+                'display:flex', 'align-items:center', 'justify-content:space-between',
+            ].join(';');
+            headerBar.innerHTML = `
+                <div style="color:#fff;font-size:20px;font-weight:700">Product Details</div>
+                <div style="color:#bae6fd;font-size:11px">${escHtml(dateStr)}</div>
+            `;
+
+            const clonedTable = table.cloneNode(true);
+            // NOTE: NO overflow:hidden here — that clips the last column's pill badges.
+            // Border-radius is applied to the outer tableWrap div instead.
+            clonedTable.style.cssText = [
+                'width:100%', 'border-collapse:collapse',
+                'font-size:13px', 'table-layout:fixed',
+            ].join(';');
+
+            // ── Remove any truncation classes from all cells ──
+            clonedTable.querySelectorAll('td, th').forEach(cell => {
+                cell.style.whiteSpace   = 'normal';
+                cell.style.wordBreak    = 'break-word';
+                cell.style.overflow     = 'visible';
+                cell.style.textOverflow = 'unset';
+                cell.style.maxWidth     = 'none';
+                cell.classList.remove('truncate','line-clamp-1','line-clamp-2','line-clamp-3','whitespace-nowrap');
+                cell.querySelectorAll('div, span').forEach(el => {
+                    el.style.whiteSpace   = 'normal';
+                    el.style.overflow     = 'visible';
+                    el.style.textOverflow = 'unset';
+                    el.style.maxWidth     = 'none';
+                    el.classList.remove('truncate','line-clamp-1','line-clamp-2','line-clamp-3','whitespace-nowrap');
+                });
+            });
+
+            // ── thead: gradient bg, each th styled, last th gets extra right padding ──
+            const theadTr = clonedTable.querySelector('thead tr');
+            if (theadTr) {
+                theadTr.style.background = 'linear-gradient(135deg,#0284c7,#4f46e5)';
+                const ths = theadTr.querySelectorAll('th');
+                ths.forEach((th, i) => {
+                    const isLast = i === ths.length - 1;
+                    th.style.cssText = `padding:10px ${isLast ? '20px' : '14px'} 10px 14px;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;border:none;text-align:left`;
+                });
+            }
+
+            // ── tbody: zebra rows, per-column td styling so UOM pill is preserved ──
+            clonedTable.querySelectorAll('tbody tr').forEach((tr, idx) => {
+                tr.style.background = idx % 2 === 0 ? '#ffffff' : '#f0f9ff';
+                const tds = tr.querySelectorAll('td');
+                const colCount = tds.length;
+                tds.forEach((td, i) => {
+                    const isLast   = i === colCount - 1;
+                    const baseCss  = `border-bottom:1px solid #e0f2fe;vertical-align:top;color:#1e293b;font-size:13px`;
+                    if (isLast) {
+                        // UOM column — preserve pill badge, add more right padding
+                        td.style.cssText = `padding:10px 20px 10px 14px;${baseCss}`;
+                        // Re-style the pill span inside
+                        const pill = td.querySelector('span');
+                        if (pill) {
+                            pill.style.cssText = 'display:inline-block;background:#e0f2fe;color:#0369a1;border-radius:9999px;padding:3px 12px;font-size:11px;font-weight:700;white-space:nowrap;line-height:1.6';
+                        }
+                    } else if (i === colCount - 2) {
+                        // Quantity column — right-align
+                        td.style.cssText = `padding:10px 14px;${baseCss};text-align:right;font-weight:600`;
+                    } else {
+                        td.style.cssText = `padding:10px 14px;${baseCss}`;
+                    }
+                });
+            });
+
+            // ── tfoot ──
+            clonedTable.querySelectorAll('tfoot tr').forEach(tr => {
+                tr.style.background = 'rgba(14,165,233,0.12)';
+                const tds = tr.querySelectorAll('td');
+                const colCount = tds.length;
+                tds.forEach((td, i) => {
+                    const isLast = i === colCount - 1;
+                    td.style.cssText = `padding:10px ${isLast ? '20px' : '14px'} 10px 14px;font-weight:700;color:#0369a1;border-top:2px solid #7dd3fc;font-size:13px`;
+                });
+            });
+
+            // Wrap table in a rounded container (avoids overflow:hidden clipping)
+            const tableWrap = document.createElement('div');
+            tableWrap.style.cssText = 'border-radius:0 0 12px 12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)';
+            tableWrap.appendChild(clonedTable);
+
+            wrapper.appendChild(headerBar);
+            wrapper.appendChild(tableWrap);
+            document.body.appendChild(wrapper);
+
+            advanceExportStep('Rendering pixels…');
+
+            const canvas = await html2canvas(wrapper, {
+                scale: 2, useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                windowWidth: 1024,   // wider than wrapper to prevent right-edge clipping
+            });
+
+            document.body.removeChild(wrapper);
+            advanceExportStep('Saving PNG…');
+
+            const link = document.createElement('a');
+            link.download = `Product_List_${new Date().toISOString().slice(0,10)}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            success = true;
+
+            if (window.showGlobalNotification) window.showGlobalNotification('Image downloaded successfully!', 'success');
+        } catch (e) {
+            console.error('Image export error:', e);
+            alert('Failed to generate image. Please try again.');
+        } finally {
+            hideExportOverlay(success);
+            setTimeout(() => setShareButtonsLoading(false), success ? 900 : 0);
+        }
+    };
+
+    // Close on Escape key
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('share-preview-modal');
+            if (modal && modal.style.display !== 'none') {
+                closeSharePreview();
+            }
+        }
+    });
+})();
 </script>
 
 <script>

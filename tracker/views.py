@@ -100,10 +100,87 @@ def dashboard_view(request):
     completed_orders = base_qs.filter(order_status='CLOSED', payment_status='PAID')
     active_orders    = base_qs.exclude(order_status='CLOSED', payment_status='PAID')
     status_choices   = Order.STATUS_CHOICES
+
+    # Build supplier → order mapping for client-side supplier filter
+    # Returns: { 'Supplier Name': ['order-uuid-1', 'order-uuid-2', ...], ... }
+    from collections import defaultdict
+    supplier_rows = (
+        SupplierCostOption.objects
+        .filter(is_selected=True, product__order__isnull=False)
+        .exclude(supplier_name='')
+        .values('supplier_name', 'product__order_id')
+        .distinct()
+    )
+    supplier_order_map = defaultdict(list)
+    for row in supplier_rows:
+        supplier_order_map[row['supplier_name']].append(str(row['product__order_id']))
+    supplier_order_map = dict(supplier_order_map)  # plain dict for JSON serialization
+
+    # Distinct customer names for the customer filter
+    all_customers = sorted(
+        Order.objects.exclude(customer_name='')
+        .values_list('customer_name', flat=True)
+        .distinct()
+    )
+
     return render(request, 'tracker/dashboard.html', {
-        'orders':           active_orders,
-        'completed_orders': completed_orders,
-        'status_choices':   status_choices,
+        'orders':             active_orders,
+        'completed_orders':   completed_orders,
+        'status_choices':     status_choices,
+        'supplier_order_map': supplier_order_map,
+        'all_customers':      all_customers,
+    })
+
+
+@login_required
+def individual_products_view(request):
+    """
+    Flattened view of ALL products across all orders.
+    Each product tracks its own Customer-side and Supplier-side stage independently.
+    Supports filtering by: customer_stage, supplier_stage, order status, text search.
+    """
+    # Base queryset — eager-load related objects to avoid N+1
+    products_qs = (
+        Product.objects
+        .select_related('order', 'lot')
+        .prefetch_related('supplier_options')
+        .order_by('-order__order_date', 'sl_no')
+    )
+
+    # ---------- Filters from GET params ----------
+    customer_stage_filter = request.GET.get('customer_stage', '').strip()
+    supplier_stage_filter = request.GET.get('supplier_stage', '').strip()
+    order_status_filter   = request.GET.get('order_status', '').strip()
+    search_query          = request.GET.get('q', '').strip()
+
+    if customer_stage_filter:
+        products_qs = products_qs.filter(customer_stage=customer_stage_filter)
+    if supplier_stage_filter:
+        products_qs = products_qs.filter(supplier_stage=supplier_stage_filter)
+    if order_status_filter:
+        products_qs = products_qs.filter(order__order_status=order_status_filter)
+    if search_query:
+        products_qs = products_qs.filter(
+            Q(item_name__icontains=search_query) |
+            Q(order__customer_name__icontains=search_query) |
+            Q(order__order_number__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+
+    total_count    = products_qs.count()
+    filtered_count = total_count  # same since filtering is already applied
+
+    return render(request, 'tracker/individual_products.html', {
+        'products':               products_qs,
+        'total_count':            total_count,
+        'customer_stage_choices': Product.CUSTOMER_STAGE_CHOICES,
+        'supplier_stage_choices': Product.SUPPLIER_STAGE_CHOICES,
+        'order_status_choices':   Order.STATUS_CHOICES,
+        # Active filter values (to pre-select dropdowns)
+        'f_customer_stage':  customer_stage_filter,
+        'f_supplier_stage':  supplier_stage_filter,
+        'f_order_status':    order_status_filter,
+        'f_search':          search_query,
     })
 
 @login_required
@@ -1059,6 +1136,54 @@ def bulk_update_product_status_api(request):
             
         updated_count = Product.objects.filter(id__in=product_ids).update(status=new_status)
         return JsonResponse({'success': True, 'updated_count': updated_count})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required
+@require_POST
+def api_update_product_stage(request, product_id):
+    """Update a product's Customer-side or Supplier-side stage independently.
+
+    Request body:
+        { "side": "customer" | "supplier", "stage": "STAGE_CODE" | "" }
+
+    Passing an empty string for stage clears that side.
+    """
+    product = get_object_or_404(Product, id=product_id)
+    try:
+        data      = json.loads(request.body)
+        side      = data.get('side', '').strip().lower()   # 'customer' or 'supplier'
+        new_stage = data.get('stage', '').strip()
+
+        if side not in ('customer', 'supplier'):
+            return JsonResponse({'success': False, 'error': "Invalid side — must be 'customer' or 'supplier'."}, status=400)
+
+        if side == 'customer':
+            valid = dict(Product.CUSTOMER_STAGE_CHOICES)
+            if new_stage and new_stage not in valid:
+                return JsonResponse({'success': False, 'error': 'Invalid customer stage value.'}, status=400)
+            product.customer_stage = new_stage if new_stage else None
+            product.save(update_fields=['customer_stage', 'updated_by', 'updated_at'])
+            label = valid.get(product.customer_stage, '')
+            return JsonResponse({
+                'success': True,
+                'side': 'customer',
+                'stage': product.customer_stage,
+                'stage_label': label,
+            })
+        else:  # supplier
+            valid = dict(Product.SUPPLIER_STAGE_CHOICES)
+            if new_stage and new_stage not in valid:
+                return JsonResponse({'success': False, 'error': 'Invalid supplier stage value.'}, status=400)
+            product.supplier_stage = new_stage if new_stage else None
+            product.save(update_fields=['supplier_stage', 'updated_by', 'updated_at'])
+            label = valid.get(product.supplier_stage, '')
+            return JsonResponse({
+                'success': True,
+                'side': 'supplier',
+                'stage': product.supplier_stage,
+                'stage_label': label,
+            })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 

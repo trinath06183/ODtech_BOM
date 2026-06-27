@@ -6,6 +6,7 @@ app_name = 'tracker'
 urlpatterns = [
     # Dashboard (Read)
     path('', views.dashboard_view, name='dashboard'),
+    path('products/all/', views.individual_products_view, name='individual_products'),
     
     # Order CRUD
     path('order/create/', views.OrderCreateView.as_view(), name='order_create'),
@@ -51,6 +52,7 @@ urlpatterns = [
     path('api/product/<uuid:product_id>/inline-update/', views.inline_update_product_api, name='api_inline_update_product'),
     path('api/product/bulk-status/', views.bulk_update_product_status_api, name='api_bulk_update_product_status'),
     path('api/product/bulk-edit/', views.bulk_attribute_edit_api, name='api_bulk_attribute_edit'),
+    path('api/product/<uuid:product_id>/stage/', views.api_update_product_stage, name='api_update_product_stage'),
 
     path('api/notes/add/', views.add_internal_note_api, name='api_add_internal_note'),
     path('api/notes/bulk-add/', views.bulk_add_internal_note_api, name='api_bulk_add_internal_note'),

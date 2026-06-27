@@ -65,6 +65,31 @@ class Product(models.Model):
         ('CLOSED', 'CLOSED'),
     ]
 
+    # Customer-side stages (what happens between you and the customer)
+    CUSTOMER_STAGE_CHOICES = [
+        ('REQ_RECEIVED', 'Requirement Received'),
+        ('QUOT_GIVEN',   'Quotation Given'),
+        ('PO_RECEIVED',  'PO Received'),
+        ('PI_GIVEN',     'PI Given'),
+        ('PROD_GIVEN',   'Product Given'),
+        ('INV_GIVEN',    'Invoice Given'),
+    ]
+
+    # Supplier-side stages (what happens between you and the supplier)
+    SUPPLIER_STAGE_CHOICES = [
+        ('REQ_SEARCHING', 'Requirement Searching'),
+        ('QUOT_RECEIVED', 'Quotation Received'),
+        ('PO_GIVEN',      'PO Given'),
+        ('PI_RECEIVED',   'PI Received'),
+        ('PROD_RECEIVED', 'Product Received'),
+        ('INV_RECEIVED',  'Invoice Received'),
+    ]
+
+    # Combined — kept for validation / display helpers
+    STAGE_CHOICES = CUSTOMER_STAGE_CHOICES + SUPPLIER_STAGE_CHOICES
+    CUSTOMER_STAGES = {v for v, _ in CUSTOMER_STAGE_CHOICES}
+    SUPPLIER_STAGES = {v for v, _ in SUPPLIER_STAGE_CHOICES}
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='products')
     lot = models.ForeignKey(Lot, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
@@ -76,6 +101,20 @@ class Product(models.Model):
     uom = models.CharField(max_length=50, default='Pcs')
     photo_or_document = models.FileField(upload_to='product_docs/', blank=True, null=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='OPEN')
+    customer_stage = models.CharField(
+        max_length=30,
+        choices=CUSTOMER_STAGE_CHOICES,
+        blank=True,
+        null=True,
+        help_text='Current stage on the Customer side for this product.'
+    )
+    supplier_stage = models.CharField(
+        max_length=30,
+        choices=SUPPLIER_STAGE_CHOICES,
+        blank=True,
+        null=True,
+        help_text='Current stage on the Supplier side for this product.'
+    )
     is_purchased = models.BooleanField(default=False)
     buying_price_ex_gst = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     buying_price_inc_gst = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)

@@ -70,6 +70,42 @@
                         {% endif %}
                     </dd>
                 </div>
+
+                <!-- Stage tracking (Customer + Supplier independent) -->
+                <div class="border-t border-gray-100 pt-3 space-y-2">
+                    <!-- Customer Stage -->
+                    <div class="flex justify-between items-center">
+                        <dt class="text-gray-500 flex items-center gap-1">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                            Customer Stage
+                        </dt>
+                        <dd>
+                            {% if product.customer_stage %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">
+                                {{ product.get_customer_stage_display }}
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-gray-300 italic">Not set</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <!-- Supplier Stage -->
+                    <div class="flex justify-between items-center">
+                        <dt class="text-gray-500 flex items-center gap-1">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                            Supplier Stage
+                        </dt>
+                        <dd>
+                            {% if product.supplier_stage %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+                                {{ product.get_supplier_stage_display }}
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-gray-300 italic">Not set</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                </div>
                 {% if product.make_or_model %}
                 <div class="flex justify-between border-t border-gray-100 pt-3">
                     <dt class="text-gray-500">Make/Model</dt>

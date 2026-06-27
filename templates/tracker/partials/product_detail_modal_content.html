@@ -117,17 +117,33 @@
     }" class="h-full flex flex-col">
     <!-- Header -->
     <div
-        class="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 bg-gray-50 flex-shrink-0">
-        <div>
-            <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <span class="text-indigo-600">Product Info & Pricing</span>
-                <!-- prettier-ignore -->
-                <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-normal">Sl No. {{ product.sl_no }}</span>
-            </h2>
-            <p class="text-xs text-gray-500 mt-0.5">View details, calculate pricing & profit margins, and manage
-                supplier options.</p>
+        class="px-6 py-3 border-b border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 bg-gray-50 flex-shrink-0">
+        <div class="flex-1 min-w-0">
+            <!-- Title row -->
+            <div class="flex flex-wrap items-center gap-2 mb-0.5">
+                <h2 class="text-lg font-bold text-indigo-600 whitespace-nowrap">Product Info &amp; Pricing</h2>
+                <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-normal whitespace-nowrap">Sl No. {{ product.sl_no }}</span>
+            </div>
+            <!-- Subtitle + Stage chips on same row -->
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <p class="text-xs text-gray-400">View details, calculate pricing &amp; profit margins, and manage supplier options.</p>
+                <!-- Customer Stage chip -->
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border
+                    {% if product.customer_stage %}bg-indigo-50 border-indigo-200 text-indigo-700{% else %}bg-gray-50 border-gray-200 text-gray-400{% endif %}">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Customer</span>
+                    <span class="font-semibold">{% if product.customer_stage %}{{ product.get_customer_stage_display }}{% else %}Not set{% endif %}</span>
+                </span>
+                <!-- Supplier Stage chip -->
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border
+                    {% if product.supplier_stage %}bg-amber-50 border-amber-200 text-amber-700{% else %}bg-gray-50 border-gray-200 text-gray-400{% endif %}">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Supplier</span>
+                    <span class="font-semibold">{% if product.supplier_stage %}{{ product.get_supplier_stage_display }}{% else %}Not set{% endif %}</span>
+                </span>
+            </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-shrink-0">
             <button type="button" onclick="window.navigateProduct('prev')"
                 class="text-gray-400 hover:text-indigo-600 transition-colors p-1 bg-white hover:bg-gray-100 border rounded-md"
                 title="Previous Product">
@@ -142,7 +158,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
             </button>
-
         </div>
     </div>
 
@@ -303,6 +318,69 @@
                                         <option value="CLOSED" {% if product.status == 'CLOSED' %}selected{% endif %}>
                                             CLOSED</option>
                                     </select>
+                                </div>
+                            </div>
+
+                            <!-- ── Dual Stage Tracking Card ── -->
+                            <div class="border-l-4 border-indigo-300 bg-gradient-to-br from-indigo-50/60 to-amber-50/40 rounded-r-lg p-2.5"
+                                 x-data="modalStageCell('{{ product.id }}', '{{ product.customer_stage|default:'' }}', '{{ product.supplier_stage|default:'' }}')">
+                                <div class="flex items-center gap-1.5 mb-2">
+                                    <svg class="h-3 w-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Stage Tracking</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <!-- Customer -->
+                                    <div class="bg-white rounded-md p-1.5 border border-indigo-100 shadow-sm">
+                                        <div class="flex items-center gap-1 mb-1">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span>
+                                            <span class="text-[9px] font-bold text-indigo-500 uppercase tracking-wider">Customer</span>
+                                            <span x-show="customerSaving" class="ml-auto">
+                                                <svg class="animate-spin h-2.5 w-2.5 text-indigo-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                                            </span>
+                                        </div>
+                                        <div x-show="customerStage && !customerSaving" class="mb-1">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-100 text-indigo-700 w-full justify-center">
+                                                <span x-text="stageLabel(customerStage)"></span>
+                                            </span>
+                                        </div>
+                                        <select @change="setStage('customer', $event.target.value)"
+                                                class="w-full text-[10px] border border-indigo-200 rounded py-0.5 px-1 bg-indigo-50 text-indigo-700 focus:ring-1 focus:ring-indigo-300 cursor-pointer"
+                                                :disabled="customerSaving">
+                                            <option value="">— clear —</option>
+                                            <option value="REQ_RECEIVED"  {% if product.customer_stage == 'REQ_RECEIVED'  %}selected{% endif %}>Requirement Received</option>
+                                            <option value="QUOT_GIVEN"    {% if product.customer_stage == 'QUOT_GIVEN'    %}selected{% endif %}>Quotation Given</option>
+                                            <option value="PO_RECEIVED"   {% if product.customer_stage == 'PO_RECEIVED'   %}selected{% endif %}>PO Received</option>
+                                            <option value="PI_GIVEN"      {% if product.customer_stage == 'PI_GIVEN'      %}selected{% endif %}>PI Given</option>
+                                            <option value="PROD_GIVEN"    {% if product.customer_stage == 'PROD_GIVEN'    %}selected{% endif %}>Product Given</option>
+                                            <option value="INV_GIVEN"     {% if product.customer_stage == 'INV_GIVEN'     %}selected{% endif %}>Invoice Given</option>
+                                        </select>
+                                    </div>
+                                    <!-- Supplier -->
+                                    <div class="bg-white rounded-md p-1.5 border border-amber-100 shadow-sm">
+                                        <div class="flex items-center gap-1 mb-1">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></span>
+                                            <span class="text-[9px] font-bold text-amber-500 uppercase tracking-wider">Supplier</span>
+                                            <span x-show="supplierSaving" class="ml-auto">
+                                                <svg class="animate-spin h-2.5 w-2.5 text-amber-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                                            </span>
+                                        </div>
+                                        <div x-show="supplierStage && !supplierSaving" class="mb-1">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-700 w-full justify-center">
+                                                <span x-text="stageLabel(supplierStage)"></span>
+                                            </span>
+                                        </div>
+                                        <select @change="setStage('supplier', $event.target.value)"
+                                                class="w-full text-[10px] border border-amber-200 rounded py-0.5 px-1 bg-amber-50 text-amber-700 focus:ring-1 focus:ring-amber-300 cursor-pointer"
+                                                :disabled="supplierSaving">
+                                            <option value="">— clear —</option>
+                                            <option value="REQ_SEARCHING" {% if product.supplier_stage == 'REQ_SEARCHING' %}selected{% endif %}>Requirement Searching</option>
+                                            <option value="QUOT_RECEIVED" {% if product.supplier_stage == 'QUOT_RECEIVED' %}selected{% endif %}>Quotation Received</option>
+                                            <option value="PO_GIVEN"      {% if product.supplier_stage == 'PO_GIVEN'      %}selected{% endif %}>PO Given</option>
+                                            <option value="PI_RECEIVED"   {% if product.supplier_stage == 'PI_RECEIVED'   %}selected{% endif %}>PI Received</option>
+                                            <option value="PROD_RECEIVED" {% if product.supplier_stage == 'PROD_RECEIVED' %}selected{% endif %}>Product Received</option>
+                                            <option value="INV_RECEIVED"  {% if product.supplier_stage == 'INV_RECEIVED'  %}selected{% endif %}>Invoice Received</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1562,4 +1640,67 @@ window.formatPriceForCopy = function(val) {
     if(!isNaN(n)) return '₹ ' + n.toFixed(2);
     return val;
 };
+</script>
+<script>
+// ── Modal-scoped dual-stage Alpine component ───────────────────
+const _MODAL_STAGE_LABELS = {
+    REQ_RECEIVED:'Requirement Received', QUOT_GIVEN:'Quotation Given',
+    PO_RECEIVED:'PO Received',           PI_GIVEN:'PI Given',
+    PROD_GIVEN:'Product Given',          INV_GIVEN:'Invoice Given',
+    REQ_SEARCHING:'Requirement Searching', QUOT_RECEIVED:'Quotation Received',
+    PO_GIVEN:'PO Given',                   PI_RECEIVED:'PI Received',
+    PROD_RECEIVED:'Product Received',      INV_RECEIVED:'Invoice Received',
+};
+function modalStageCell(productId, initCust, initSupp) {
+    return {
+        productId,
+        customerStage:  initCust || '',
+        supplierStage:  initSupp || '',
+        customerSaving: false,
+        supplierSaving: false,
+        stageLabel(s) { return _MODAL_STAGE_LABELS[s] || s; },
+        async setStage(side, value) {
+            const savingKey = side === 'customer' ? 'customerSaving' : 'supplierSaving';
+            const stageKey  = side === 'customer' ? 'customerStage'  : 'supplierStage';
+            if (this[savingKey]) return;
+            const prev = this[stageKey];
+            this[savingKey] = true;
+            this[stageKey]  = value;
+            try {
+                const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+                const res = await fetch(`/api/product/${this.productId}/stage/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf ? csrf.value : '',
+                    },
+                    body: JSON.stringify({ side, stage: value }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this[stageKey] = data.stage || '';
+                    if (window.showGlobalNotification) {
+                        const lbl = data.stage
+                            ? (_MODAL_STAGE_LABELS[data.stage] || data.stage)
+                            : `${side} stage cleared`;
+                        window.showGlobalNotification(
+                            `${side.charAt(0).toUpperCase() + side.slice(1)} stage: ${lbl}`, 'success'
+                        );
+                    }
+                    // Sync the badge in the header row of the product table without reload
+                    const tr = document.querySelector(`tr[data-product-id="${this.productId}"]`);
+                    if (tr) tr.dataset[side + 'Stage'] = this[stageKey];
+                } else {
+                    this[stageKey] = prev;
+                    if (window.showGlobalNotification) window.showGlobalNotification(data.error || 'Failed to update stage', 'error');
+                }
+            } catch(e) {
+                this[stageKey] = prev;
+                console.error('Stage update error:', e);
+            } finally {
+                this[savingKey] = false;
+            }
+        },
+    };
+}
 </script>
