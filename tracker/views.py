@@ -2237,3 +2237,381 @@ def system_restore(request):
 def system_admin_backup_view(request):
     """Renders the backup and restore page."""
     return render(request, 'tracker/backup.html')
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Bulk Action: Add Supplier to selected products (ADDITIVE — never overwrites)
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required
+@require_POST
+def bulk_add_supplier_api(request):
+    """
+    Additively append a new SupplierCostOption to every selected product.
+    Existing supplier options are never touched.
+
+    Request body (JSON):
+        {
+            "product_ids":    ["uuid1", "uuid2", ...],
+            "supplier_name":  "Acme Corp",
+            "location":       "Mumbai",       // optional
+            "contact_number": "9876543210",   // optional
+            "contact_email":  "a@acme.com",   // optional
+            "base_price":     1200.00,        // optional, unit price ex-GST
+            "gst_percentage": 18.0,           // optional, default 18
+            "total_inc_gst":  1416.00,        // optional, unit price inc-GST
+            "description":    "Notes…",       // optional
+            "mark_as_selected": false         // optional — set this supplier as selected
+        }
+
+    Returns:
+        { "success": true, "created_count": N, "skipped_duplicates": M }
+    """
+    from django.db import transaction
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON body.'}, status=400)
+
+    product_ids    = data.get('product_ids', [])
+    supplier_name  = (data.get('supplier_name') or '').strip()
+    location       = (data.get('location') or '').strip()
+    contact_number = (data.get('contact_number') or '').strip()
+    contact_email  = (data.get('contact_email') or '').strip()
+    description    = (data.get('description') or '').strip()
+    mark_selected  = bool(data.get('mark_as_selected', False))
+
+    try:
+        base_price      = float(data.get('base_price') or 0)
+        gst_percentage  = float(data.get('gst_percentage') or 18)
+        total_inc_gst   = float(data.get('total_inc_gst') or 0)
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Prices must be numeric.'}, status=400)
+
+    if not product_ids:
+        return JsonResponse({'success': False, 'error': 'No product IDs supplied.'}, status=400)
+    if not supplier_name:
+        return JsonResponse({'success': False, 'error': 'Supplier name is required.'}, status=400)
+
+    products = list(Product.objects.filter(id__in=product_ids).select_related('order'))
+    if not products:
+        return JsonResponse({'success': False, 'error': 'No matching products found.'}, status=404)
+
+    # Find products that already have this supplier to avoid exact duplicates
+    existing_pairs = set(
+        SupplierCostOption.objects
+        .filter(product__in=products, supplier_name__iexact=supplier_name)
+        .values_list('product_id', flat=True)
+    )
+    skipped = len(existing_pairs)
+    new_products = [p for p in products if p.id not in existing_pairs]
+
+    if not new_products:
+        return JsonResponse({
+            'success': True,
+            'created_count': 0,
+            'skipped_duplicates': skipped,
+            'message': f'Supplier "{supplier_name}" already exists on all selected products.',
+        })
+
+    try:
+        with transaction.atomic():
+            # If marking as selected, deselect all existing options for these products first
+            if mark_selected:
+                SupplierCostOption.objects.filter(
+                    product__in=new_products, is_selected=True
+                ).update(is_selected=False)
+
+            new_options = SupplierCostOption.objects.bulk_create([
+                SupplierCostOption(
+                    product=p,
+                    supplier_name=supplier_name,
+                    location=location,
+                    contact_number=contact_number,
+                    contact_email=contact_email or None,
+                    description=description,
+                    base_price=base_price,
+                    gst_percentage=gst_percentage,
+                    total_inc_gst=total_inc_gst,
+                    is_selected=mark_selected,
+                    created_by=request.user,
+                    updated_by=request.user,
+                )
+                for p in new_products
+            ])
+
+            # If selected, sync product buying price fields too
+            if mark_selected and base_price > 0:
+                ids_to_update = [p.id for p in new_products]
+                Product.objects.filter(id__in=ids_to_update).update(
+                    buying_price_ex_gst=base_price,
+                    buying_price_inc_gst=total_inc_gst if total_inc_gst else base_price,
+                    gst_percentage=gst_percentage,
+                    updated_by=request.user,
+                )
+
+            # Audit log
+            AuditLog.objects.bulk_create([
+                AuditLog(
+                    user=request.user,
+                    action='CREATE',
+                    model_name='SupplierCostOption',
+                    object_id=str(opt.id),
+                    object_repr=f'Supplier "{supplier_name}" added to {opt.product.item_name}',
+                    changes=json.dumps({
+                        'supplier_name': supplier_name,
+                        'base_price': str(base_price),
+                        'is_selected': mark_selected,
+                        'action': 'bulk_add_supplier',
+                    }),
+                )
+                for opt in new_options
+            ])
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Database error: {str(e)}'}, status=500)
+
+    return JsonResponse({
+        'success': True,
+        'created_count': len(new_options),
+        'skipped_duplicates': skipped,
+    })
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Bulk Action: Update Selling Price / Profit Margin on selected products
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required
+@require_POST
+def bulk_update_selling_price_api(request):
+    """
+    Apply a flat selling price OR a profit-margin percentage to selected products.
+
+    Request body (JSON) — supply ONE of the two modes:
+        Mode A — flat price:
+            { "product_ids": [...], "mode": "flat",
+              "selling_price_ex_gst": 1500.00,
+              "selling_price_inc_gst": 1770.00,
+              "gst_percentage": 18.0 }
+
+        Mode B — margin percentage (calculated per-product from its buying_price_ex_gst):
+            { "product_ids": [...], "mode": "margin",
+              "margin_percent": 25.0,
+              "gst_percentage": 18.0 }
+
+    Returns:
+        { "success": true, "updated_count": N, "skipped_no_price": K }
+    """
+    from django.db import transaction
+    from decimal import Decimal, ROUND_HALF_UP
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON body.'}, status=400)
+
+    product_ids = data.get('product_ids', [])
+    mode        = (data.get('mode') or '').strip().lower()
+
+    if not product_ids:
+        return JsonResponse({'success': False, 'error': 'No product IDs supplied.'}, status=400)
+    if mode not in ('flat', 'margin'):
+        return JsonResponse({'success': False, 'error': 'mode must be "flat" or "margin".'}, status=400)
+
+    try:
+        gst_pct = Decimal(str(data.get('gst_percentage') or 18))
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'gst_percentage must be numeric.'}, status=400)
+
+    products = list(Product.objects.filter(id__in=product_ids))
+    if not products:
+        return JsonResponse({'success': False, 'error': 'No matching products found.'}, status=404)
+
+    updated_count   = 0
+    skipped_no_price = 0
+    audit_entries   = []
+
+    try:
+        with transaction.atomic():
+            for product in products:
+                if mode == 'flat':
+                    try:
+                        sp_ex  = Decimal(str(data.get('selling_price_ex_gst') or 0))
+                        sp_inc = Decimal(str(data.get('selling_price_inc_gst') or 0))
+                    except Exception:
+                        return JsonResponse({'success': False, 'error': 'Selling prices must be numeric.'}, status=400)
+
+                    old_ex  = product.selling_price_ex_gst
+                    old_inc = product.selling_price_inc_gst
+                    product.selling_price_ex_gst  = sp_ex
+                    product.selling_price_inc_gst = sp_inc
+                    product.gst_percentage        = gst_pct
+                    product.updated_by            = request.user
+                    product.save(update_fields=[
+                        'selling_price_ex_gst', 'selling_price_inc_gst',
+                        'gst_percentage', 'updated_by', 'updated_at'
+                    ])
+                    audit_entries.append(AuditLog(
+                        user=request.user,
+                        action='UPDATE',
+                        model_name='Product',
+                        object_id=str(product.id),
+                        object_repr=product.item_name,
+                        changes=json.dumps({
+                            'selling_price_ex_gst': {'old': str(old_ex), 'new': str(sp_ex)},
+                            'selling_price_inc_gst': {'old': str(old_inc), 'new': str(sp_inc)},
+                            'action': 'bulk_flat_price',
+                        }),
+                    ))
+                    updated_count += 1
+
+                else:  # margin mode
+                    try:
+                        margin_pct = Decimal(str(data.get('margin_percent') or 0))
+                    except Exception:
+                        return JsonResponse({'success': False, 'error': 'margin_percent must be numeric.'}, status=400)
+
+                    buy_ex = product.buying_price_ex_gst
+                    if not buy_ex or buy_ex <= 0:
+                        skipped_no_price += 1
+                        continue
+
+                    sp_ex  = (buy_ex * (1 + margin_pct / 100)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    sp_inc = (sp_ex * (1 + gst_pct / 100)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+                    old_ex  = product.selling_price_ex_gst
+                    old_inc = product.selling_price_inc_gst
+                    product.selling_price_ex_gst  = sp_ex
+                    product.selling_price_inc_gst = sp_inc
+                    product.gst_percentage        = gst_pct
+                    product.updated_by            = request.user
+                    product.save(update_fields=[
+                        'selling_price_ex_gst', 'selling_price_inc_gst',
+                        'gst_percentage', 'updated_by', 'updated_at'
+                    ])
+                    audit_entries.append(AuditLog(
+                        user=request.user,
+                        action='UPDATE',
+                        model_name='Product',
+                        object_id=str(product.id),
+                        object_repr=product.item_name,
+                        changes=json.dumps({
+                            'selling_price_ex_gst': {'old': str(old_ex), 'new': str(sp_ex)},
+                            'selling_price_inc_gst': {'old': str(old_inc), 'new': str(sp_inc)},
+                            'margin_percent': str(margin_pct),
+                            'action': 'bulk_margin_price',
+                        }),
+                    ))
+                    updated_count += 1
+
+            AuditLog.objects.bulk_create(audit_entries)
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Database error: {str(e)}'}, status=500)
+
+    return JsonResponse({
+        'success': True,
+        'updated_count': updated_count,
+        'skipped_no_price': skipped_no_price,
+    })
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Bulk Action: Update Customer Stage and/or Supplier Stage on selected products
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required
+@require_POST
+def bulk_update_stages_api(request):
+    """
+    Set customer_stage and/or supplier_stage on multiple products at once.
+    Passing an empty string clears the stage for that side.
+
+    Request body (JSON):
+        {
+            "product_ids":     ["uuid1", "uuid2", ...],
+            "customer_stage":  "PO_RECEIVED",   // optional, pass "" to clear
+            "supplier_stage":  "QUOT_RECEIVED"  // optional, pass "" to clear
+        }
+
+    Returns:
+        { "success": true, "updated_count": N }
+    """
+    from django.db import transaction
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON body.'}, status=400)
+
+    product_ids     = data.get('product_ids', [])
+    customer_stage  = data.get('customer_stage')   # None means "not supplied"
+    supplier_stage  = data.get('supplier_stage')   # None means "not supplied"
+
+    if not product_ids:
+        return JsonResponse({'success': False, 'error': 'No product IDs supplied.'}, status=400)
+
+    # At least one stage must be provided
+    if customer_stage is None and supplier_stage is None:
+        return JsonResponse({'success': False, 'error': 'Supply at least one of customer_stage or supplier_stage.'}, status=400)
+
+    # Validate choices
+    valid_customer = {k for k, _ in Product.CUSTOMER_STAGE_CHOICES} | {''}
+    valid_supplier = {k for k, _ in Product.SUPPLIER_STAGE_CHOICES} | {''}
+
+    if customer_stage is not None and customer_stage not in valid_customer:
+        return JsonResponse({'success': False, 'error': f'Invalid customer_stage: {customer_stage}'}, status=400)
+    if supplier_stage is not None and supplier_stage not in valid_supplier:
+        return JsonResponse({'success': False, 'error': f'Invalid supplier_stage: {supplier_stage}'}, status=400)
+
+    products_qs = Product.objects.filter(id__in=product_ids)
+    if not products_qs.exists():
+        return JsonResponse({'success': False, 'error': 'No matching products found.'}, status=404)
+
+    update_fields = {'updated_by': request.user}
+    if customer_stage is not None:
+        update_fields['customer_stage'] = customer_stage or None
+    if supplier_stage is not None:
+        update_fields['supplier_stage'] = supplier_stage or None
+
+    # Snapshot for audit
+    audit_field_names = []
+    if customer_stage is not None:
+        audit_field_names.append('customer_stage')
+    if supplier_stage is not None:
+        audit_field_names.append('supplier_stage')
+
+    snapshots = list(products_qs.values('id', 'item_name', *audit_field_names))
+
+    try:
+        with transaction.atomic():
+            updated_count = products_qs.update(**update_fields)
+
+            audit_entries = []
+            for row in snapshots:
+                changes = {}
+                if customer_stage is not None:
+                    changes['customer_stage'] = {
+                        'old': row.get('customer_stage') or '',
+                        'new': customer_stage,
+                    }
+                if supplier_stage is not None:
+                    changes['supplier_stage'] = {
+                        'old': row.get('supplier_stage') or '',
+                        'new': supplier_stage,
+                    }
+                changes['action'] = 'bulk_update_stages'
+                audit_entries.append(AuditLog(
+                    user=request.user,
+                    action='UPDATE',
+                    model_name='Product',
+                    object_id=str(row['id']),
+                    object_repr=row['item_name'],
+                    changes=json.dumps(changes),
+                ))
+            AuditLog.objects.bulk_create(audit_entries)
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Database error: {str(e)}'}, status=500)
+
+    return JsonResponse({'success': True, 'updated_count': updated_count})
+

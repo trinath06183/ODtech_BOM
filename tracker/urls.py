@@ -52,6 +52,9 @@ urlpatterns = [
     path('api/product/<uuid:product_id>/inline-update/', views.inline_update_product_api, name='api_inline_update_product'),
     path('api/product/bulk-status/', views.bulk_update_product_status_api, name='api_bulk_update_product_status'),
     path('api/product/bulk-edit/', views.bulk_attribute_edit_api, name='api_bulk_attribute_edit'),
+    path('api/product/bulk-add-supplier/', views.bulk_add_supplier_api, name='api_bulk_add_supplier'),
+    path('api/product/bulk-selling-price/', views.bulk_update_selling_price_api, name='api_bulk_update_selling_price'),
+    path('api/product/bulk-stages/', views.bulk_update_stages_api, name='api_bulk_update_stages'),
     path('api/product/<uuid:product_id>/stage/', views.api_update_product_stage, name='api_update_product_stage'),
 
     path('api/notes/add/', views.add_internal_note_api, name='api_add_internal_note'),

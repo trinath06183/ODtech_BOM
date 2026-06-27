@@ -204,6 +204,33 @@
                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     Delete
                 </button>
+
+                <!-- Add Supplier -->
+                <button type="button" onclick="bulkTabSelect('supplier')"
+                        id="bulk-tab-supplier"
+                        class="bulk-tab inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all
+                               border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Add Supplier
+                </button>
+
+                <!-- Pricing & Margin -->
+                <button type="button" onclick="bulkTabSelect('pricing')"
+                        id="bulk-tab-pricing"
+                        class="bulk-tab inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all
+                               border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Pricing &amp; Margin
+                </button>
+
+                <!-- Update Stages -->
+                <button type="button" onclick="bulkTabSelect('stages')"
+                        id="bulk-tab-stages"
+                        class="bulk-tab inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all
+                               border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Update Stages
+                </button>
             </div>
 
             <!-- ── Panels (only the active one is visible) ── -->
@@ -373,8 +400,190 @@
                 </div>
             </div>
 
-        </div>
+            <!-- ── Add Supplier Panel ── -->
+            <div id="bulk-panel-supplier" class="bulk-panel hidden bg-emerald-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
+                <div class="flex flex-wrap items-start gap-3">
+                    <div class="w-full">
+                        <p class="text-sm font-semibold text-emerald-900">Add Supplier to Selected Products</p>
+                        <p class="text-xs text-emerald-600">A new supplier quote will be <strong>appended</strong> to each selected product. Existing suppliers are never removed.</p>
+                    </div>
+                    <div class="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <!-- Supplier Name -->
+                        <div>
+                            <label class="block text-xs font-semibold text-emerald-800 mb-1">Supplier Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="bulk_supp_name" placeholder="e.g. Acme Corp"
+                                   class="block w-full px-3 py-2 text-sm border-emerald-300 bg-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-md shadow-sm">
+                        </div>
+                        <!-- Location -->
+                        <div>
+                            <label class="block text-xs font-semibold text-emerald-800 mb-1">Location</label>
+                            <input type="text" id="bulk_supp_location" placeholder="e.g. Mumbai"
+                                   class="block w-full px-3 py-2 text-sm border-emerald-300 bg-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-md shadow-sm">
+                        </div>
+                        <!-- Contact Number -->
+                        <div>
+                            <label class="block text-xs font-semibold text-emerald-800 mb-1">Contact Number</label>
+                            <input type="text" id="bulk_supp_contact" placeholder="e.g. 9876543210"
+                                   class="block w-full px-3 py-2 text-sm border-emerald-300 bg-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-md shadow-sm">
+                        </div>
+                        <!-- Contact Email -->
+                        <div>
+                            <label class="block text-xs font-semibold text-emerald-800 mb-1">Contact Email</label>
+                            <input type="email" id="bulk_supp_email" placeholder="e.g. supplier@mail.com"
+                                   class="block w-full px-3 py-2 text-sm border-emerald-300 bg-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-md shadow-sm">
+                        </div>
+                        <!-- Base Price -->
+                        <div>
+                            <label class="block text-xs font-semibold text-emerald-800 mb-1">Unit Price (Ex. GST) ₹</label>
+                            <input type="number" id="bulk_supp_base_price" placeholder="0.00" step="0.01" min="0"
+                                   class="block w-full px-3 py-2 text-sm border-emerald-300 bg-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-md shadow-sm">
+                        </div>
+                        <!-- GST % -->
+                        <div>
+                            <label class="block text-xs font-semibold text-emerald-800 mb-1">GST %</label>
+                            <input type="number" id="bulk_supp_gst" placeholder="18" step="0.01" min="0" value="18"
+                                   class="block w-full px-3 py-2 text-sm border-emerald-300 bg-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-md shadow-sm">
+                        </div>
+                        <!-- Description -->
+                        <div class="sm:col-span-2 lg:col-span-3">
+                            <label class="block text-xs font-semibold text-emerald-800 mb-1">Notes / Description</label>
+                            <input type="text" id="bulk_supp_desc" placeholder="Optional notes about this supplier quote"
+                                   class="block w-full px-3 py-2 text-sm border-emerald-300 bg-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-md shadow-sm">
+                        </div>
+                        <!-- Mark as Selected toggle -->
+                        <div class="sm:col-span-2 lg:col-span-3 flex items-center gap-3">
+                            <label class="inline-flex items-center cursor-pointer gap-2 text-xs font-semibold text-emerald-800">
+                                <input type="checkbox" id="bulk_supp_mark_selected" class="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded">
+                                Mark this supplier as the <em>selected</em> (active) supplier for each product
+                            </label>
+                        </div>
+                    </div>
+                    <div class="w-full flex justify-end mt-1">
+                        <button type="button" id="bulk-supplier-apply-btn" onclick="applyBulkAddSupplier()"
+                                class="inline-flex items-center gap-2 px-5 py-2 border border-transparent text-sm font-semibold rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            <span id="bulk-supplier-apply-label">Add Supplier to Selected</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
+            <!-- ── Pricing & Margin Panel ── -->
+            <div id="bulk-panel-pricing" class="bulk-panel hidden bg-amber-50 border border-amber-200 rounded-xl p-4 shadow-sm">
+                <div class="flex flex-wrap items-start gap-3">
+                    <div class="w-full">
+                        <p class="text-sm font-semibold text-amber-900">Bulk Pricing &amp; Margin Update</p>
+                        <p class="text-xs text-amber-600">Set a flat selling price for all selected products, or apply a profit margin calculated individually from each product's buying price.</p>
+                    </div>
+                    <!-- Mode toggle -->
+                    <div class="w-full flex items-center gap-3">
+                        <label class="inline-flex items-center cursor-pointer gap-1.5 text-xs font-semibold text-amber-800">
+                            <input type="radio" name="bulk_price_mode" id="bulk_price_mode_flat" value="flat" checked
+                                   onchange="document.getElementById('bulk-pricing-flat-fields').classList.remove('hidden'); document.getElementById('bulk-pricing-margin-fields').classList.add('hidden');"
+                                   class="h-4 w-4 text-amber-600 focus:ring-amber-500">
+                            Flat Price (same value for all)
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer gap-1.5 text-xs font-semibold text-amber-800">
+                            <input type="radio" name="bulk_price_mode" id="bulk_price_mode_margin" value="margin"
+                                   onchange="document.getElementById('bulk-pricing-flat-fields').classList.add('hidden'); document.getElementById('bulk-pricing-margin-fields').classList.remove('hidden');"
+                                   class="h-4 w-4 text-amber-600 focus:ring-amber-500">
+                            Profit Margin % (per-product calculation)
+                        </label>
+                    </div>
+                    <!-- Flat price fields -->
+                    <div id="bulk-pricing-flat-fields" class="w-full grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-amber-800 mb-1">Selling Price (Ex. GST) ₹</label>
+                            <input type="number" id="bulk_price_ex_gst" placeholder="0.00" step="0.01" min="0"
+                                   class="block w-full px-3 py-2 text-sm border-amber-300 bg-white focus:outline-none focus:ring-amber-500 focus:border-amber-500 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-amber-800 mb-1">Selling Price (Inc. GST) ₹</label>
+                            <input type="number" id="bulk_price_inc_gst" placeholder="0.00" step="0.01" min="0"
+                                   class="block w-full px-3 py-2 text-sm border-amber-300 bg-white focus:outline-none focus:ring-amber-500 focus:border-amber-500 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-amber-800 mb-1">GST %</label>
+                            <input type="number" id="bulk_price_gst_pct" placeholder="18" step="0.01" min="0" value="18"
+                                   class="block w-full px-3 py-2 text-sm border-amber-300 bg-white focus:outline-none focus:ring-amber-500 focus:border-amber-500 rounded-md shadow-sm">
+                        </div>
+                    </div>
+                    <!-- Margin fields -->
+                    <div id="bulk-pricing-margin-fields" class="hidden w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-amber-800 mb-1">Profit Margin %</label>
+                            <input type="number" id="bulk_margin_pct" placeholder="e.g. 25" step="0.01" min="0"
+                                   class="block w-full px-3 py-2 text-sm border-amber-300 bg-white focus:outline-none focus:ring-amber-500 focus:border-amber-500 rounded-md shadow-sm">
+                            <p class="text-[10px] text-amber-500 mt-1">Products without a buying price will be skipped.</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-amber-800 mb-1">GST % (applied on selling price)</label>
+                            <input type="number" id="bulk_margin_gst_pct" placeholder="18" step="0.01" min="0" value="18"
+                                   class="block w-full px-3 py-2 text-sm border-amber-300 bg-white focus:outline-none focus:ring-amber-500 focus:border-amber-500 rounded-md shadow-sm">
+                        </div>
+                    </div>
+                    <div class="w-full flex justify-end mt-1">
+                        <button type="button" id="bulk-pricing-apply-btn" onclick="applyBulkPricing()"
+                                class="inline-flex items-center gap-2 px-5 py-2 border border-transparent text-sm font-semibold rounded-md shadow-sm text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span id="bulk-pricing-apply-label">Apply to Selected</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Update Stages Panel ── -->
+            <div id="bulk-panel-stages" class="bulk-panel hidden bg-orange-50 border border-orange-200 rounded-xl p-4 shadow-sm">
+                <div class="flex flex-wrap items-start gap-3">
+                    <div class="w-full">
+                        <p class="text-sm font-semibold text-orange-900">Bulk Update Customer &amp; Supplier Stages</p>
+                        <p class="text-xs text-orange-600">Set one or both stages for all selected products. Leave a field unchanged to keep existing values.</p>
+                    </div>
+                    <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- Customer Stage -->
+                        <div>
+                            <label class="block text-xs font-semibold text-indigo-700 mb-1">
+                                <span class="inline-block w-2 h-2 rounded-full bg-indigo-400 mr-1"></span>Customer Stage
+                            </label>
+                            <select id="bulk_customer_stage" class="block w-full pl-3 pr-8 py-2 text-sm border-orange-300 bg-white focus:outline-none focus:ring-orange-500 focus:border-orange-500 rounded-md shadow-sm">
+                                <option value="">— leave unchanged —</option>
+                                <option value="REQ_RECEIVED">Requirement Received</option>
+                                <option value="QUOT_GIVEN">Quotation Given</option>
+                                <option value="PO_RECEIVED">PO Received</option>
+                                <option value="PI_GIVEN">PI Given</option>
+                                <option value="PROD_GIVEN">Product Given</option>
+                                <option value="INV_GIVEN">Invoice Given</option>
+                                <option value="">— Clear Stage —</option>
+                            </select>
+                        </div>
+                        <!-- Supplier Stage -->
+                        <div>
+                            <label class="block text-xs font-semibold text-amber-700 mb-1">
+                                <span class="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1"></span>Supplier Stage
+                            </label>
+                            <select id="bulk_supplier_stage" class="block w-full pl-3 pr-8 py-2 text-sm border-orange-300 bg-white focus:outline-none focus:ring-orange-500 focus:border-orange-500 rounded-md shadow-sm">
+                                <option value="">— leave unchanged —</option>
+                                <option value="REQ_SEARCHING">Requirement Searching</option>
+                                <option value="QUOT_RECEIVED">Quotation Received</option>
+                                <option value="PO_GIVEN">PO Given</option>
+                                <option value="PI_RECEIVED">PI Received</option>
+                                <option value="PROD_RECEIVED">Product Received</option>
+                                <option value="INV_RECEIVED">Invoice Received</option>
+                                <option value="">— Clear Stage —</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="w-full flex justify-end mt-1">
+                        <button type="button" id="bulk-stages-apply-btn" onclick="applyBulkStages()"
+                                class="inline-flex items-center gap-2 px-5 py-2 border border-transparent text-sm font-semibold rounded-md shadow-sm text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span id="bulk-stages-apply-label">Update Stages on Selected</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
 
         <!-- ═══════════════════════════════════════════════════════ -->
         <!-- Products Table                                         -->
@@ -422,7 +631,10 @@
                             data-searchable data-lot-header="true"
                             data-lot-id="{{ lot_group.grouper.id|default:'unassigned' }}"
                             @click="toggleLot('{{ lot_group.grouper.id|default:'unassigned' }}')">
-                            <td x-show="bulkOpen"></td>
+                            <td x-show="bulkOpen" class="px-4 py-2" @click.stop>
+                                <input type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+                                    onclick="const checked = this.checked; this.closest('tbody').querySelectorAll('.product-checkbox').forEach(cb => cb.checked = checked)">
+                            </td>
                             <td colspan="12" class="px-6 py-2">
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-bold text-cyan-800 uppercase tracking-wider">
@@ -455,7 +667,7 @@
                             data-supplier-location="{{ product.cached_selected_supplier.location|default:'' }}"
                             data-description="{{ product.description|default:'' }}"
                             data-uom="{{ product.uom|default:'' }}"
-                            data-remark="{{ product.remark|default:'' }}"
+                            data-remark="{{ product.remark|default:''|escape }}"
                             data-supplier-contact="{{ product.cached_selected_supplier.contact_number|default:'' }}"
                             data-supplier-email="{{ product.cached_selected_supplier.contact_email|default:'' }}"
                             data-supplier-link="{{ product.cached_selected_supplier.product_link|default:'' }}"
@@ -1004,9 +1216,10 @@
                             <tr class="bg-gradient-to-r from-sky-600 to-indigo-600">
                                 <th class="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider rounded-tl-lg">Sl. No.</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Product Name</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Make/Model</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Description</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Remark</th>
-                                <th class="px-4 py-3 text-right text-xs font-bold text-white uppercase tracking-wider">Quantity</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Quantity</th>
                                 <th class="px-4 py-3 text-center text-xs font-bold text-white uppercase tracking-wider rounded-tr-lg">UOM</th>
                             </tr>
                         </thead>
@@ -1786,12 +1999,15 @@ function productListApp() {
 (function () {
     // colour tokens per tab
     const TAB_META = {
-        move:   { ring: 'ring-indigo-400',  bg: 'bg-indigo-200',  text: 'text-indigo-900'  },
-        status: { ring: 'ring-blue-400',    bg: 'bg-blue-200',    text: 'text-blue-900'    },
-        edit:   { ring: 'ring-violet-400',  bg: 'bg-violet-200',  text: 'text-violet-900'  },
-        note:   { ring: 'ring-teal-400',    bg: 'bg-teal-200',    text: 'text-teal-900'    },
-        share:  { ring: 'ring-sky-400',     bg: 'bg-sky-200',     text: 'text-sky-900'     },
-        delete: { ring: 'ring-red-400',     bg: 'bg-red-200',     text: 'text-red-900'     },
+        move:     { ring: 'ring-indigo-400',  bg: 'bg-indigo-200',  text: 'text-indigo-900'  },
+        status:   { ring: 'ring-blue-400',    bg: 'bg-blue-200',    text: 'text-blue-900'    },
+        edit:     { ring: 'ring-violet-400',  bg: 'bg-violet-200',  text: 'text-violet-900'  },
+        note:     { ring: 'ring-teal-400',    bg: 'bg-teal-200',    text: 'text-teal-900'    },
+        share:    { ring: 'ring-sky-400',     bg: 'bg-sky-200',     text: 'text-sky-900'     },
+        delete:   { ring: 'ring-red-400',     bg: 'bg-red-200',     text: 'text-red-900'     },
+        supplier: { ring: 'ring-emerald-400', bg: 'bg-emerald-200', text: 'text-emerald-900' },
+        pricing:  { ring: 'ring-amber-400',   bg: 'bg-amber-200',   text: 'text-amber-900'   },
+        stages:   { ring: 'ring-orange-400',  bg: 'bg-orange-200',  text: 'text-orange-900'  },
     };
 
     window._activeBulkTab = null;
@@ -1985,6 +2201,243 @@ function postBulkInternalNote() {
         else alert('Network error: ' + err.message);
         if (btn)   { btn.disabled = false; }
         if (label) { label.textContent = 'Post to Selected'; }
+    });
+}
+
+// ════════════════════════════════════════════════════════
+// Bulk: Add Supplier (additive — never overwrites existing)
+// ════════════════════════════════════════════════════════
+function applyBulkAddSupplier() {
+    const selected = Array.from(document.querySelectorAll('.product-checkbox:checked')).map(cb => cb.value);
+    if (selected.length === 0) {
+        if (window.showGlobalNotification) window.showGlobalNotification('Please select at least one product.', 'warning');
+        else alert('Please select at least one product.');
+        return;
+    }
+
+    const supplierName = document.getElementById('bulk_supp_name')?.value.trim();
+    if (!supplierName) {
+        if (window.showGlobalNotification) window.showGlobalNotification('Supplier name is required.', 'warning');
+        else alert('Supplier name is required.');
+        document.getElementById('bulk_supp_name')?.focus();
+        return;
+    }
+
+    const markSelected = document.getElementById('bulk_supp_mark_selected')?.checked || false;
+    const confirmMsg = markSelected
+        ? `Add "${supplierName}" to ${selected.length} product(s) and set as ACTIVE supplier?`
+        : `Append "${supplierName}" to ${selected.length} product(s)?`;
+    if (!confirm(confirmMsg)) return;
+
+    const btn   = document.getElementById('bulk-supplier-apply-btn');
+    const label = document.getElementById('bulk-supplier-apply-label');
+    if (btn)   btn.disabled = true;
+    if (label) label.textContent = 'Adding…';
+
+    const basePrice   = parseFloat(document.getElementById('bulk_supp_base_price')?.value || 0) || 0;
+    const gstPct      = parseFloat(document.getElementById('bulk_supp_gst')?.value || 18) || 18;
+    const totalIncGst = basePrice > 0 ? parseFloat((basePrice * (1 + gstPct / 100)).toFixed(2)) : 0;
+
+    fetch('/api/product/bulk-add-supplier/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+        },
+        body: JSON.stringify({
+            product_ids:      selected,
+            supplier_name:    supplierName,
+            location:         document.getElementById('bulk_supp_location')?.value.trim() || '',
+            contact_number:   document.getElementById('bulk_supp_contact')?.value.trim() || '',
+            contact_email:    document.getElementById('bulk_supp_email')?.value.trim() || '',
+            description:      document.getElementById('bulk_supp_desc')?.value.trim() || '',
+            base_price:       basePrice,
+            gst_percentage:   gstPct,
+            total_inc_gst:    totalIncGst,
+            mark_as_selected: markSelected,
+        }),
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            let msg = `Supplier "${supplierName}" added to ${data.created_count} product(s).`;
+            if (data.skipped_duplicates > 0) msg += ` (${data.skipped_duplicates} already had this supplier — skipped.)`;
+            if (window.showGlobalNotification) window.showGlobalNotification(msg, 'success');
+            else alert(msg);
+            // Reset fields
+            ['bulk_supp_name','bulk_supp_location','bulk_supp_contact','bulk_supp_email','bulk_supp_desc','bulk_supp_base_price'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            const gstEl = document.getElementById('bulk_supp_gst');
+            if (gstEl) gstEl.value = '18';
+            const markEl = document.getElementById('bulk_supp_mark_selected');
+            if (markEl) markEl.checked = false;
+        } else {
+            if (window.showGlobalNotification) window.showGlobalNotification('Error: ' + (data.error || 'Unknown error'), 'error');
+            else alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('[BulkSupplier] Network error:', err);
+        if (window.showGlobalNotification) window.showGlobalNotification('Network error: ' + err.message, 'error');
+        else alert('Network error: ' + err.message);
+    })
+    .finally(() => {
+        if (btn)   btn.disabled = false;
+        if (label) label.textContent = 'Add Supplier to Selected';
+    });
+}
+
+// ════════════════════════════════════════════════════════
+// Bulk: Update Selling Price / Profit Margin
+// ════════════════════════════════════════════════════════
+function applyBulkPricing() {
+    const selected = Array.from(document.querySelectorAll('.product-checkbox:checked')).map(cb => cb.value);
+    if (selected.length === 0) {
+        if (window.showGlobalNotification) window.showGlobalNotification('Please select at least one product.', 'warning');
+        else alert('Please select at least one product.');
+        return;
+    }
+
+    const mode = document.querySelector('input[name="bulk_price_mode"]:checked')?.value || 'flat';
+    let payload = { product_ids: selected, mode };
+
+    if (mode === 'flat') {
+        const exGst  = parseFloat(document.getElementById('bulk_price_ex_gst')?.value || 0);
+        const incGst = parseFloat(document.getElementById('bulk_price_inc_gst')?.value || 0);
+        const gstPct = parseFloat(document.getElementById('bulk_price_gst_pct')?.value || 18);
+        if (!exGst && !incGst) {
+            if (window.showGlobalNotification) window.showGlobalNotification('Please enter at least one price value.', 'warning');
+            else alert('Please enter at least one price value.');
+            return;
+        }
+        Object.assign(payload, { selling_price_ex_gst: exGst, selling_price_inc_gst: incGst, gst_percentage: gstPct });
+    } else {
+        const margin = parseFloat(document.getElementById('bulk_margin_pct')?.value || 0);
+        const gstPct = parseFloat(document.getElementById('bulk_margin_gst_pct')?.value || 18);
+        if (!margin || margin <= 0) {
+            if (window.showGlobalNotification) window.showGlobalNotification('Please enter a valid margin percentage.', 'warning');
+            else alert('Please enter a valid margin percentage.');
+            return;
+        }
+        Object.assign(payload, { margin_percent: margin, gst_percentage: gstPct });
+    }
+
+    const confirmMsg = mode === 'flat'
+        ? `Apply the same flat selling price to ${selected.length} product(s)?`
+        : `Apply ${payload.margin_percent}% profit margin to ${selected.length} product(s) (based on each product's buying price)?`;
+    if (!confirm(confirmMsg)) return;
+
+    const btn   = document.getElementById('bulk-pricing-apply-btn');
+    const label = document.getElementById('bulk-pricing-apply-label');
+    if (btn)   btn.disabled = true;
+    if (label) label.textContent = 'Updating…';
+
+    fetch('/api/product/bulk-selling-price/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+        },
+        body: JSON.stringify(payload),
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            let msg = `Selling price updated for ${data.updated_count} product(s).`;
+            if (data.skipped_no_price > 0) msg += ` ${data.skipped_no_price} product(s) skipped (no buying price set).`;
+            if (window.showGlobalNotification) window.showGlobalNotification(msg, 'success');
+            else alert(msg);
+            if (data.updated_count > 0) setTimeout(() => window.location.reload(), 1200);
+        } else {
+            if (window.showGlobalNotification) window.showGlobalNotification('Error: ' + (data.error || 'Unknown error'), 'error');
+            else alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('[BulkPricing] Network error:', err);
+        if (window.showGlobalNotification) window.showGlobalNotification('Network error: ' + err.message, 'error');
+        else alert('Network error: ' + err.message);
+    })
+    .finally(() => {
+        if (btn)   btn.disabled = false;
+        if (label) label.textContent = 'Apply to Selected';
+    });
+}
+
+// ════════════════════════════════════════════════════════
+// Bulk: Update Customer / Supplier Stages
+// ════════════════════════════════════════════════════════
+function applyBulkStages() {
+    const selected = Array.from(document.querySelectorAll('.product-checkbox:checked')).map(cb => cb.value);
+    if (selected.length === 0) {
+        if (window.showGlobalNotification) window.showGlobalNotification('Please select at least one product.', 'warning');
+        else alert('Please select at least one product.');
+        return;
+    }
+
+    // A value of "" in the select means "leave unchanged" (first option).
+    // We use a data attribute trick: if the option selected has data-clear="true" it means explicit clear.
+    // Since both empty options map to "" we distinguish by checking if user intentionally picked
+    // the last "Clear Stage" option — we'll track this via a sentinel approach below.
+    const custEl   = document.getElementById('bulk_customer_stage');
+    const suppEl   = document.getElementById('bulk_supplier_stage');
+    const custVal  = custEl?.value  || null;   // null = leave unchanged (default option = "")
+    const suppVal  = suppEl?.value  || null;
+
+    // If both are at default (empty) and neither the user nor a selection was made
+    const custChanged = custEl  && custEl.selectedIndex  !== 0;
+    const suppChanged = suppEl  && suppEl.selectedIndex  !== 0;
+
+    if (!custChanged && !suppChanged) {
+        if (window.showGlobalNotification) window.showGlobalNotification('Please select at least one stage to update.', 'warning');
+        else alert('Please select at least one stage to update.');
+        return;
+    }
+
+    const payload = { product_ids: selected };
+    if (custChanged) payload.customer_stage = custVal || '';
+    if (suppChanged) payload.supplier_stage = suppVal || '';
+
+    const parts = [];
+    if (custChanged) parts.push(`Customer → "${custEl.options[custEl.selectedIndex].text}"`);
+    if (suppChanged) parts.push(`Supplier → "${suppEl.options[suppEl.selectedIndex].text}"`);
+    if (!confirm(`Update ${selected.length} product(s):\n${parts.join('\n')}`)) return;
+
+    const btn   = document.getElementById('bulk-stages-apply-btn');
+    const label = document.getElementById('bulk-stages-apply-label');
+    if (btn)   btn.disabled = true;
+    if (label) label.textContent = 'Updating…';
+
+    fetch('/api/product/bulk-stages/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+        },
+        body: JSON.stringify(payload),
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const msg = `Stages updated for ${data.updated_count} product(s).`;
+            if (window.showGlobalNotification) window.showGlobalNotification(msg, 'success');
+            else alert(msg);
+            if (data.updated_count > 0) setTimeout(() => window.location.reload(), 1200);
+        } else {
+            if (window.showGlobalNotification) window.showGlobalNotification('Error: ' + (data.error || 'Unknown error'), 'error');
+            else alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('[BulkStages] Network error:', err);
+        if (window.showGlobalNotification) window.showGlobalNotification('Network error: ' + err.message, 'error');
+        else alert('Network error: ' + err.message);
+    })
+    .finally(() => {
+        if (btn)   btn.disabled = false;
+        if (label) label.textContent = 'Update Stages on Selected';
     });
 }
 
@@ -2769,6 +3222,7 @@ window.navigateProduct = function(direction) {
             return {
                 slNo:        slNo,
                 itemName:    itemName,
+                makeOrModel: row.dataset.brand || '',
                 description: row.dataset.description || '',
                 remark:      row.dataset.remark       || '',
                 quantity:    row.dataset.qty           || '',
@@ -2813,12 +3267,11 @@ window.navigateProduct = function(direction) {
             tr.innerHTML = `
                 <td class="px-4 py-3 text-sm font-semibold text-gray-700 align-top">${escHtml(p.slNo)}</td>
                 <td class="px-4 py-3 text-sm font-medium text-gray-900 align-top break-words" style="min-width:120px;max-width:220px;white-space:normal;word-break:break-word">${escHtml(p.itemName)}</td>
+                <td class="px-4 py-3 text-sm text-gray-600 align-top break-words" style="min-width:120px;max-width:200px;white-space:normal;word-break:break-word">${escHtml(p.makeOrModel) || '<span class="text-gray-300 italic text-xs">&mdash;</span>'}</td>
                 <td class="px-4 py-3 text-sm text-gray-600 align-top break-words" style="min-width:160px;max-width:300px;white-space:normal;word-break:break-word">${escHtml(p.description) || '<span class="text-gray-300 italic text-xs">&mdash;</span>'}</td>
                 <td class="px-4 py-3 text-sm text-gray-600 align-top break-words" style="min-width:140px;max-width:260px;white-space:normal;word-break:break-word">${escHtml(p.remark) || '<span class="text-gray-300 italic text-xs">&mdash;</span>'}</td>
-                <td class="px-4 py-3 text-sm font-semibold text-gray-900 text-right align-top">${escHtml(p.quantity)}</td>
-                <td class="px-4 py-3 text-sm font-medium text-sky-700 align-top">
-                    <span style="display:inline-block;background:#e0f2fe;border-radius:9999px;padding:2px 10px;font-size:11px;font-weight:600;line-height:1.6;white-space:nowrap">${escHtml(p.uom) || '&mdash;'}</span>
-                </td>
+                <td class="px-4 py-3 text-sm font-semibold text-gray-900 text-left align-top">${escHtml(p.quantity)}</td>
+                <td class="px-4 py-3 text-sm font-medium text-sky-700 align-top text-center">${escHtml(p.uom) || '&mdash;'}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -2828,8 +3281,8 @@ window.navigateProduct = function(direction) {
         tfootTr.className = 'border-t-2 border-sky-300';
         tfootTr.style.background = 'linear-gradient(to right, rgba(14,165,233,0.12), rgba(99,102,241,0.12))';
         tfootTr.innerHTML = `
-            <td colspan="4" class="px-4 py-3 text-sm font-bold text-sky-800">Total (${products.length} item${products.length > 1 ? 's' : ''})</td>
-            <td class="px-4 py-3 text-sm font-bold text-gray-900 text-right">${totalQty}</td>
+            <td colspan="5" class="px-4 py-3 text-sm font-bold text-sky-800">Total (${products.length} item${products.length > 1 ? 's' : ''})</td>
+            <td class="px-4 py-3 text-sm font-bold text-gray-900 text-left">${totalQty}</td>
             <td class="px-4 py-3 text-sm text-gray-500 text-center text-xs">&mdash;</td>
         `;
         tfoot.appendChild(tfootTr);
@@ -2881,6 +3334,7 @@ window.navigateProduct = function(direction) {
         return products.map(p => ({
             'Sl. No.':        p.slNo,
             'Product Name':   p.itemName,
+            'Make/Model':     p.makeOrModel,
             'Description':    p.description,
             'Remark':         p.remark,
             'Quantity':       p.quantity,
